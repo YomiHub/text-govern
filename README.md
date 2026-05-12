@@ -1,0 +1,233 @@
+# @anmei/text-govern
+
+自动化文案治理 CLI + AI Skill。静态扫描源码、规则匹配、AI 语义分析、生成 HTML 整改报告；规则以 Excel 为一等公民，支持通过 `/text-govern-*` slash 命令在 Cursor / Claude Code / Codex 中直接触发。
+
+## 安装
+
+### 方式一：npx（推荐，免全局安装）
+
+```bash
+# 把 Skill + Slash 命令铺设到当前项目的 .cursor / .claude / .codex 目录
+npx @anmei/text-govern install
+
+# 只装 Cursor
+npx @anmei/text-govern install --editor cursor
+
+# 装到用户全局（对所有项目生效）
+npx @anmei/text-govern install --scope global
+```
+
+安装后在 Cursor 输入 `/text-govern-init` 开始使用。
+
+### 方式二：全局安装
+
+```bash
+npm install -g @anmei/text-govern
+text-govern install
+```
+
+### 方式三：当前仓库内置版本（开发中）
+
+```bash
+cd scripts/text-govern
+npm install
+cd ../..
+npm run text-govern:install
+```
+
+## Slash 命令一览
+
+安装后在 Cursor / Claude Code 的 Agent 对话框中输入：
+
+| 命令 | 说明 | 是否需要 AI |
+|------|------|------------|
+| `/text-govern` | 全流程：扫描 → 规则匹配 → AI 语义分析 → HTML 报告 | 是 |
+| `/text-govern-init` | 初始化配置与模板 | 否 |
+| `/text-govern-rules` | AI 按 6 维度生成 Excel 规则库 | 是 |
+| `/text-govern-scan` | 扫描源码，提取中文文案片段 | 否 |
+| `/text-govern-analyze` | 规则匹配分析，输出 findings.rule.json | 否 |
+| `/text-govern-report` | AI 语义分析 + 生成 HTML 报告 | 是 |
+
+Codex 已弃用 custom prompts，统一通过加载 Skill 触发（输入「用 text-govern 跑 rules」即可）。
+
+## CLI 命令
+
+不依赖 AI 的命令可在任何环境直接运行（包括 CI）：
+
+```bash
+text-govern init        # 初始化配置
+text-govern scan        # 扫描源码 → .text-govern/extracted.json
+text-govern analyze     # 规则匹配 → .text-govern/findings.rule.json
+text-govern report      # 合并 rule+ai → .text-govern/report.html
+text-govern template    # 重新生成空 Excel 模板
+text-govern install     # 铺设 Skill + Slash 命令到 IDE
+```
+
+### install 选项
+
+```
+text-govern install [options]
+
+Options:
+  --editor <list>    编辑器（cursor,claude,codex，逗号分隔；默认自动探测）
+  --scope <scope>    project | global（默认 project）
+  --force            覆盖已有资产
+  --dry-run          仅打印计划，不实际写入
+  --cwd <dir>        工作目录（project scope 有效）
+```
+
+## 三层架构
+
+```
+@anmei/text-govern
+├── Layer 1: CLI bin          纯算法层，无 AI 依赖，可跑 CI
+│   bin/text-govern.js
+├── Layer 2: Skill            AI 编排说明书，跨编辑器复用
+│   skills/text-govern/SKILL.md
+│   skills/prompts/generate-rules.md
+│   skills/prompts/analyze-semantics.md
+└── Layer 3: Slash 命令       各编辑器的入口快捷方式
+    commands/text-govern*.md
+```
+
+`text-govern install` 负责把 Layer 2+3 资产拷贝到 `.cursor/` / `.claude/` / `.codex/` 目录。
+
+## 跨编辑器兼容矩阵
+
+| 编辑器 | Skill 载体 | Slash 命令 | 安装后自动探测 |
+|--------|-----------|-----------|--------------|
+| Cursor | `.cursor/skills/text-govern/SKILL.md` | `.cursor/commands/text-govern*.md` | 是（检测 `.cursor/` 目录） |
+| Claude Code | `.claude/skills/text-govern/SKILL.md` | `.claude/commands/text-govern*.md` | 是（检测 `.claude/` 目录） |
+| Codex | `.codex/skills/text-govern/SKILL.md` | 不铺（已弃用 prompts） | 是（检测 `.codex/` 目录） |
+
+## 配置
+
+```js
+// text-govern.config.js（在项目根目录）
+module.exports = {
+  // 可留空，让 AI 根据源码判断；也可填任意中文业务描述
+  industry: '医药系统中的代理商专用商贷宝系统',
+
+  scan: {
+    include: ['pages/**', 'packageA/**', 'packageB/**', 'packageC/**', 'components/**', 'app.json'],
+    exclude: ['node_modules/**', 'miniprogram_npm/**', '.text-govern/**', '**/*.test.js'],
+    adapters: ['wxml', 'js', 'json'],
+  },
+
+  customRules:  { dir: './text-govern-rules/custom' },
+  builtinRules: { dir: './text-govern-rules/generated' },
+
+  rules: {
+    // 是否启用内置默认词库（config/*.default.xlsx）
+    // 默认 false，只用项目 AI 生成 / 自定义规则
+    includeDefaults: false,
+  },
+
+  output: { dir: './.text-govern' },
+
+  severity: {
+    // 严重违禁 | 高风险 | 需关注 | 推荐修改 | none
+    failOn: '严重违禁',
+  },
+};
+```
+
+## 规则三层与优先级
+
+```
+内置默认（可选） < AI 生成 text-govern-rules/generated/*.xlsx < 用户自定义 text-govern-rules/custom/*.xlsx
+```
+
+### 内置默认规则（`rules.includeDefaults: true`）
+
+来自 CLI 包内 `config/*.default.xlsx`，涵盖：
+
+- 广告法极限词（84 条）
+- 金融合规（12 条）
+- 医疗合规（11 条）
+- 不文明用语 / 封建迷信（轻量兜底）
+
+编辑方式：直接打开 Excel，或修改 `scripts/build-default-rules.js` 后运行重新生成。
+
+### AI 生成规则（推荐主力）
+
+在 IDE 中执行 `/text-govern-rules`，AI 按 6 维度生成到 `text-govern-rules/generated/`：
+
+1. 合规底线（违禁/极限词/行业合规/政治宗教民族）
+2. 品牌与调性（客户称谓、产品名一致、B 端/C 端口吻分寸）
+3. 术语统一（同义异写、动作动词、字段名）
+4. 页面级业务语义（同字段在不同页面的语义歧义）
+5. 用户体验文案（错误提示、空状态、加载、按钮、危险操作）
+6. 文案上下文信号（pageHint / surrounding / container / kind 辅助）
+
+### 自定义规则（最高优先级）
+
+`text-govern-rules/custom/` 由业务/合规同学手工维护，编辑 Excel 后立即生效。
+
+## Excel 规则格式
+
+### banned.xlsx — 违禁违规词
+
+Sheet 名：`违禁违规词`
+
+| 词 | 替换建议 | 风险等级 | 分类 | 法规来源 | 备注 |
+|---|---|---|---|---|---|
+
+- `风险等级` 和 `分类` 均为中文自由值
+- 推荐风险等级：`严重违禁` / `高风险` / `需关注` / `推荐修改`
+
+### terminology.xlsx — 术语统一
+
+Sheet 名：`术语统一`
+
+| 标准词 | 别名（逗号分隔） | 备注 |
+|---|---|---|
+
+### semantic.xlsx — 业务语义
+
+Sheet 名：`业务语义`
+
+| 页面/路径 glob | 字段含义 | 禁用替代词 | 推荐词 | 备注 |
+|---|---|---|---|---|
+
+## 输出文件
+
+| 文件 | 说明 |
+|------|------|
+| `.text-govern/extracted.json` | 文案提取结果 |
+| `.text-govern/findings.rule.json` | 规则匹配结果 |
+| `.text-govern/findings.ai.json` | AI 语义分析结果 |
+| `.text-govern/report.html` | 自包含 HTML 整改报告（可直接浏览器打开） |
+
+## 推荐工作流
+
+```
+# 1. 在新项目安装
+npx @anmei/text-govern install
+
+# 2. 初始化（在 IDE 里或命令行）
+text-govern init           # 或 /text-govern-init
+
+# 3. 生成规则库（在 Cursor/Claude Code 里）
+/text-govern-rules         # AI 读取源码，按 6 维度生成 Excel
+
+# 4. 确认规则后提交
+git add text-govern-rules/
+git commit -m "feat: 初始化文案治理规则库"
+
+# 5. 日常检查（在 IDE 里或 CI）
+/text-govern               # 完整流程
+# 或
+text-govern scan && text-govern analyze && text-govern report
+```
+
+## 文件类型支持
+
+| 适配器 | 文件扩展名 | 说明 |
+|--------|----------|------|
+| `wxml` | `.wxml` | 微信小程序模板 |
+| `js` | `.js` `.wxs` | JS + Babel AST |
+| `json` | `.json` | JSON 值提取 |
+| `vue` | `.vue` | Vue SFC（需 `@vue/compiler-sfc`） |
+| `jsx` | `.jsx` `.tsx` | JSX（需 `@babel/parser`，已内置） |
+| `html` | `.html` `.htm` | HTML（需 `parse5`） |

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文案治理整改报告</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:#fff;padding:28px 40px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:22px;font-weight:700;letter-spacing:.5px}
+.header .meta{font-size:13px;opacity:.75;margin-top:6px}
+.header .badge{background:rgba(255,255,255,.15);border-radius:20px;padding:6px 16px;font-size:13px}
+.container{max-width:1400px;margin:0 auto;padding:24px 32px}
+/* Stats cards */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.stat-critical .stat-icon{background:#fff0f0;color:#e53e3e}
+.stat-high .stat-icon{background:#fff5eb;color:#dd6b20}
+.stat-medium .stat-icon{background:#fefce8;color:#d97706}
+.stat-low .stat-icon{background:#f0fdf4;color:#38a169}
+.stat-card h3{font-size:28px;font-weight:700;line-height:1}
+.stat-card p{font-size:12px;color:#666;margin-top:4px}
+.stat-critical h3{color:#e53e3e}
+.stat-high h3{color:#dd6b20}
+.stat-medium h3{color:#d97706}
+.stat-low h3{color:#38a169}
+/* Category cards */
+.category-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.cat-card{background:#fff;border-radius:10px;padding:16px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06);cursor:pointer;transition:all .2s;border:2px solid transparent}
+.cat-card:hover,.cat-card.active{border-color:#0f3460;background:#f0f4ff}
+.cat-card .count{font-size:24px;font-weight:700;color:#0f3460}
+.cat-card .label{font-size:12px;color:#666;margin-top:4px}
+/* Layout */
+.main-layout{display:grid;grid-template-columns:240px 1fr;gap:20px}
+/* Sidebar filters */
+.sidebar{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08);height:fit-content;position:sticky;top:20px}
+.sidebar h3{font-size:13px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.filter-group{margin-bottom:20px}
+.filter-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s;font-size:14px}
+.filter-item:hover{background:#f5f5f5}
+.filter-item input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:#0f3460}
+.filter-item .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-critical{background:#e53e3e}
+.dot-high{background:#dd6b20}
+.dot-medium{background:#d97706}
+.dot-low{background:#38a169}
+.search-box{width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;outline:none;transition:border .2s}
+.search-box:focus{border-color:#0f3460}
+.filter-count{margin-left:auto;background:#f0f0f0;border-radius:10px;padding:1px 7px;font-size:11px;color:#666}
+/* Table */
+.table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f0f0f0}
+.table-title{font-size:15px;font-weight:600}
+.result-count{font-size:13px;color:#999}
+table{width:100%;border-collapse:collapse}
+th{background:#fafafa;padding:11px 14px;text-align:left;font-size:12px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.3px;cursor:pointer;user-select:none;white-space:nowrap;border-bottom:2px solid #f0f0f0}
+th:hover{background:#f0f4ff;color:#0f3460}
+th .sort-arrow{margin-left:4px;opacity:.4;font-size:10px}
+th.sorted .sort-arrow{opacity:1;color:#0f3460}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f7f7f7;vertical-align:top}
+tr:hover td{background:#fafcff}
+tr.expanded td{background:#f0f4ff}
+.badge-sev{display:inline-flex;align-items:center;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-critical{background:#fff0f0;color:#e53e3e;border:1px solid #ffc0c0}
+.badge-high{background:#fff5eb;color:#dd6b20;border:1px solid #ffd0a0}
+.badge-medium{background:#fefce8;color:#d97706;border:1px solid #fde68a}
+.badge-low{background:#f0fdf4;color:#38a169;border:1px solid #a7f3d0}
+.badge-cat{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;background:#f0f4ff;color:#0f3460;border:1px solid #c7d7ff}
+.badge-src{font-size:10px;padding:1px 6px;border-radius:8px;background:#f5f5f5;color:#888;border:1px solid #e0e0e0}
+.badge-src.ai{background:#f5f0ff;color:#7c3aed;border-color:#c4b5fd}
+.file-path{font-family:"SF Mono",Monaco,"Cascadia Code",monospace;font-size:11px;color:#0f3460;word-break:break-all}
+.file-path .loc{color:#999;margin-left:4px}
+.matched-word{font-weight:600;color:#1a1a2e}
+.suggestion{color:#38a169}
+.expand-row{background:#f0f4ff}
+.expand-cell{padding:14px 20px;font-size:13px;line-height:1.7;border-bottom:2px solid #e0e8ff}
+.expand-cell .reason{color:#1a1a2e;margin-bottom:8px}
+.expand-cell .surrounding{font-family:"SF Mono",Monaco,monospace;font-size:12px;background:#fff;border:1px solid #e0e8ff;border-radius:6px;padding:8px 12px;color:#555;word-break:break-all}
+.expand-cell .meta-row{display:flex;gap:16px;margin-top:8px;font-size:12px;color:#888}
+.expand-btn{background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:4px;font-size:12px;color:#666;transition:background .15s}
+.expand-btn:hover{background:#e8f0fe;color:#0f3460}
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px}
+.page-btn{padding:6px 12px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;transition:all .15s}
+.page-btn:hover{border-color:#0f3460;color:#0f3460}
+.page-btn.active{background:#0f3460;color:#fff;border-color:#0f3460}
+.page-btn:disabled{opacity:.4;cursor:default}
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:#999}
+.empty .icon{font-size:48px;margin-bottom:12px}
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#f5f5f5}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+/* Chart */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.chart-card h3{font-size:14px;font-weight:600;color:#333;margin-bottom:16px}
+.bar-chart .bar-item{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-chart .bar-label{width:80px;font-size:12px;color:#666;text-align:right;flex-shrink:0}
+.bar-chart .bar-track{flex:1;background:#f0f0f0;border-radius:4px;height:18px;overflow:hidden}
+.bar-chart .bar-fill{height:100%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;padding-left:8px}
+.bar-chart .bar-fill span{font-size:11px;color:#fff;font-weight:600}
+.bar-fill.critical{background:linear-gradient(90deg,#e53e3e,#fc8181)}
+.bar-fill.high{background:linear-gradient(90deg,#dd6b20,#f6ad55)}
+.bar-fill.medium{background:linear-gradient(90deg,#d97706,#fcd34d)}
+.bar-fill.low{background:linear-gradient(90deg,#38a169,#68d391)}
+.pie-wrap{display:flex;align-items:center;gap:20px}
+.pie-legend{display:flex;flex-direction:column;gap:8px}
+.pie-legend-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.pie-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}.main-layout{grid-template-columns:1fr}.category-grid{grid-template-columns:repeat(3,1fr)}.chart-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>📋 文案治理整改报告</h1>
+    <div class="meta" id="reportMeta"></div>
+  </div>
+  <div class="badge" id="totalBadge">加载中...</div>
+</div>
+
+<div class="container">
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card stat-critical">
+      <div class="stat-icon">🚫</div>
+      <div><h3 id="cnt-critical">0</h3><p>严重违禁</p></div>
+    </div>
+    <div class="stat-card stat-high">
+      <div class="stat-icon">⚠️</div>
+      <div><h3 id="cnt-high">0</h3><p>高风险</p></div>
+    </div>
+    <div class="stat-card stat-medium">
+      <div class="stat-icon">📌</div>
+      <div><h3 id="cnt-medium">0</h3><p>需关注</p></div>
+    </div>
+    <div class="stat-card stat-low">
+      <div class="stat-icon">💡</div>
+      <div><h3 id="cnt-low">0</h3><p>推荐修改</p></div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <h3>按风险等级分布</h3>
+      <div class="bar-chart" id="severityChart"></div>
+    </div>
+    <div class="chart-card">
+      <h3>按问题类型分布</h3>
+      <div class="pie-wrap">
+        <svg id="pieChart" width="120" height="120" viewBox="0 0 120 120"></svg>
+        <div class="pie-legend" id="pieLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category quick filter -->
+  <div class="category-grid" id="categoryGrid"></div>
+
+  <!-- Main layout -->
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="filter-group">
+        <h3>搜索</h3>
+        <input type="text" class="search-box" id="searchBox" placeholder="文件/词/原因...">
+      </div>
+      <div class="filter-group">
+        <h3>风险等级</h3>
+        <div id="severityFilters"></div>
+      </div>
+      <div class="filter-group">
+        <h3>问题类型</h3>
+        <div id="categoryFilters"></div>
+      </div>
+      <div class="filter-group">
+        <h3>来源</h3>
+        <div id="sourceFilters"></div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">整改清单</span>
+          <span class="result-count" id="resultCount"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th data-sort="severity">等级 <span class="sort-arrow">↕</span></th>
+                <th data-sort="category">类型 <span class="sort-arrow">↕</span></th>
+                <th data-sort="file">文件位置 <span class="sort-arrow">↕</span></th>
+                <th data-sort="matched">命中词</th>
+                <th data-sort="suggestion">建议</th>
+                <th data-sort="source">来源 <span class="sort-arrow">↕</span></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const DATA = __DATA__;
+
+const SEVERITIES = ['严重违禁','高风险','需关注','推荐修改'];
+const SEVERITY_ORDER = {严重违禁:0,高风险:1,需关注:2,推荐修改:3,critical:0,high:1,medium:2,low:3};
+const SEV_LABEL = {严重违禁:'严重违禁',高风险:'高风险',需关注:'需关注',推荐修改:'推荐修改',critical:'严重违禁',high:'高风险',medium:'需关注',low:'推荐修改'};
+const SEV_CLASS = {严重违禁:'critical',高风险:'high',需关注:'medium',推荐修改:'low',critical:'critical',high:'high',medium:'medium',low:'low'};
+const CAT_LABEL = {违规治理:'违规治理',行业合规:'行业合规',词义统一类:'词义统一类',业务语义统一类:'业务语义统一类',推荐修改类:'推荐修改类',banned:'违禁词',industry:'行业合规',terminology:'术语统一',semantic:'语义统一',recommend:'推荐优化'};
+const CAT_COLORS = {违规治理:'#e53e3e',行业合规:'#dd6b20',词义统一类:'#0f3460',业务语义统一类:'#7c3aed',推荐修改类:'#38a169',banned:'#e53e3e',industry:'#dd6b20',terminology:'#0f3460',semantic:'#7c3aed',recommend:'#38a169'};
+const PAGE_SIZE = 50;
+
+let allFindings = [];
+let filtered = [];
+let currentPage = 1;
+let sortKey = 'severity';
+let sortAsc = true;
+let expandedRows = new Set();
+let activeFilters = {severity:new Set(),category:new Set(),source:new Set(['rule','ai'])};
+let searchQuery = '';
+let activeCatFilter = null;
+
+function init(){
+  const meta = DATA.meta || {};
+  document.getElementById('reportMeta').textContent =
+    `生成时间: ${new Date(meta.generatedAt||Date.now()).toLocaleString('zh-CN')} · 行业: ${meta.industry||'-'}`;
+
+  allFindings = (DATA.findings||[]).concat(DATA.aiFindings||[]);
+  document.getElementById('totalBadge').textContent = `共 ${allFindings.length} 处问题`;
+
+  // Init filter sets
+  const severities = [...new Set(allFindings.map(f=>f.severity))];
+  if(severities.length) severities.forEach(s=>activeFilters.severity.add(s)); else SEVERITIES.forEach(s=>activeFilters.severity.add(s));
+  const cats = [...new Set(allFindings.map(f=>f.category))];
+  cats.forEach(c=>activeFilters.category.add(c));
+
+  renderStats();
+  renderCharts();
+  renderCategoryGrid();
+  renderFilters();
+  applyFilters();
+
+  document.getElementById('searchBox').addEventListener('input', e=>{
+    searchQuery = e.target.value.toLowerCase();
+    currentPage=1; applyFilters();
+  });
+  document.querySelectorAll('th[data-sort]').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const k=th.dataset.sort;
+      if(sortKey===k) sortAsc=!sortAsc; else{sortKey=k;sortAsc=true;}
+      document.querySelectorAll('th').forEach(t=>t.classList.remove('sorted'));
+      th.classList.add('sorted');
+      th.querySelector('.sort-arrow').textContent=sortAsc?'↑':'↓';
+      currentPage=1; applyFilters();
+    });
+  });
+}
+
+function renderStats(){
+  const stats=DATA.stats||{bySeverity:{}};
+  [
+    ['严重违禁','critical'],
+    ['高风险','high'],
+    ['需关注','medium'],
+    ['推荐修改','low']
+  ].forEach(([s,id])=>{
+    document.getElementById('cnt-'+id).textContent=(stats.bySeverity&&stats.bySeverity[s])||0;
+  });
+}
+
+function renderCharts(){
+  const stats=DATA.stats||{bySeverity:{},byCategory:{}};
+  const total=DATA.findings?DATA.findings.length+(DATA.aiFindings?DATA.aiFindings.length:0):0;
+
+  // Bar chart
+  const bars=document.getElementById('severityChart');
+  const sevs=[...new Set([...SEVERITIES,...Object.keys(stats.bySeverity||{})])].filter(s=>(stats.bySeverity&&stats.bySeverity[s])||SEVERITIES.includes(s));
+  bars.innerHTML=sevs.map(s=>{
+    const cnt=(stats.bySeverity&&stats.bySeverity[s])||0;
+    const pct=total>0?Math.round(cnt/total*100):0;
+    return `<div class="bar-item">
+      <span class="bar-label">${SEV_LABEL[s]}</span>
+      <div class="bar-track"><div class="bar-fill ${SEV_CLASS[s]||'low'}" style="width:${pct}%"><span>${cnt}</span></div></div>
+    </div>`;
+  }).join('');
+
+  // Pie chart
+  const byCat=stats.byCategory||{};
+  const cats=Object.keys(byCat).filter(k=>byCat[k]>0);
+  const svg=document.getElementById('pieChart');
+  const legend=document.getElementById('pieLegend');
+  if(!cats.length){svg.innerHTML='<text x="60" y="64" text-anchor="middle" fill="#ccc" font-size="12">暂无数据</text>';return;}
+  let offset=0;
+  const paths=[];
+  cats.forEach(cat=>{
+    const val=byCat[cat]||0;
+    const pct=val/total;
+    if(pct===0)return;
+    const startAngle=offset*Math.PI*2-Math.PI/2;
+    const endAngle=(offset+pct)*Math.PI*2-Math.PI/2;
+    const x1=60+55*Math.cos(startAngle),y1=60+55*Math.sin(startAngle);
+    const x2=60+55*Math.cos(endAngle),y2=60+55*Math.sin(endAngle);
+    const large=pct>0.5?1:0;
+    const color=CAT_COLORS[cat]||'#999';
+    paths.push(`<path d="M60,60 L${x1},${y1} A55,55 0 ${large},1 ${x2},${y2} Z" fill="${color}" opacity=".85"/>`);
+    offset+=pct;
+  });
+  svg.innerHTML=paths.join('')+'<circle cx="60" cy="60" r="28" fill="white"/>';
+  legend.innerHTML=cats.map(cat=>`<div class="pie-legend-item"><div class="pie-dot" style="background:${CAT_COLORS[cat]||'#999'}"></div><span>${CAT_LABEL[cat]||cat}: ${byCat[cat]||0}</span></div>`).join('');
+}
+
+function renderCategoryGrid(){
+  const counts={};
+  allFindings.forEach(f=>{counts[f.category]=(counts[f.category]||0)+1;});
+  const preferred=['违规治理','行业合规','词义统一类','业务语义统一类','推荐修改类'];
+  const cats=[...new Set([...preferred,...Object.keys(counts)])];
+  document.getElementById('categoryGrid').innerHTML=cats.map(cat=>`
+    <div class="cat-card" data-cat="${cat}" onclick="toggleCatFilter('${cat}')">
+      <div class="count">${counts[cat]||0}</div>
+      <div class="label">${CAT_LABEL[cat]||cat}</div>
+    </div>`).join('');
+}
+
+window.toggleCatFilter=function(cat){
+  if(activeCatFilter===cat){activeCatFilter=null;document.querySelectorAll('.cat-card').forEach(c=>c.classList.remove('active'));}
+  else{activeCatFilter=cat;document.querySelectorAll('.cat-card').forEach(c=>c.classList.toggle('active',c.dataset.cat===cat));}
+  currentPage=1;applyFilters();
+};
+
+function renderFilters(){
+  const sevs=[...activeFilters.severity];
+  document.getElementById('severityFilters').innerHTML=sevs.map(s=>`
+    <label class="filter-item"><input type="checkbox" checked data-sev="${s}" onchange="toggleFilter('severity','${s}',this.checked)">
+    <span class="dot dot-${SEV_CLASS[s]||'low'}"></span>${SEV_LABEL[s]||s}<span class="filter-count" id="fc-sev-${slug(s)}">0</span></label>`).join('');
+
+  const cats=[...new Set(allFindings.map(f=>f.category))];
+  document.getElementById('categoryFilters').innerHTML=cats.map(c=>`
+    <label class="filter-item"><input type="checkbox" checked data-cat="${c}" onchange="toggleFilter('category','${c}',this.checked)">
+    ${CAT_LABEL[c]||c}<span class="filter-count" id="fc-cat-${slug(c)}">0</span></label>`).join('');
+
+  document.getElementById('sourceFilters').innerHTML=`
+    <label class="filter-item"><input type="checkbox" checked onchange="toggleFilter('source','rule',this.checked)">规则匹配<span class="filter-count" id="fc-src-rule">0</span></label>
+    <label class="filter-item"><input type="checkbox" checked onchange="toggleFilter('source','ai',this.checked)"><span class="badge-src ai">AI</span> 语义分析<span class="filter-count" id="fc-src-ai">0</span></label>`;
+}
+
+window.toggleFilter=function(type,val,checked){
+  if(checked)activeFilters[type].add(val); else activeFilters[type].delete(val);
+  currentPage=1;applyFilters();
+};
+
+function applyFilters(){
+  filtered=allFindings.filter(f=>{
+    if(!activeFilters.severity.has(f.severity))return false;
+    if(!activeFilters.category.has(f.category))return false;
+    if(!activeFilters.source.has(f.source))return false;
+    if(activeCatFilter&&f.category!==activeCatFilter)return false;
+    if(searchQuery){
+      const haystack=(f.file+f.matched+f.reason+f.rawText+f.suggestion).toLowerCase();
+      if(!haystack.includes(searchQuery))return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a,b)=>{
+    let av=a[sortKey]||'',bv=b[sortKey]||'';
+    if(sortKey==='severity'){av=SEVERITY_ORDER[av]??99;bv=SEVERITY_ORDER[bv]??99;}
+    if(av<bv)return sortAsc?-1:1;
+    if(av>bv)return sortAsc?1:-1;
+    return 0;
+  });
+
+  // Update counts
+  const bySev={};const byCat={};const bySrc={};
+  filtered.forEach(f=>{bySev[f.severity]=(bySev[f.severity]||0)+1;byCat[f.category]=(byCat[f.category]||0)+1;bySrc[f.source]=(bySrc[f.source]||0)+1;});
+  [...activeFilters.severity].forEach(s=>{const el=document.getElementById('fc-sev-'+slug(s));if(el)el.textContent=bySev[s]||0;});
+  [...new Set(allFindings.map(f=>f.category))].forEach(c=>{const el=document.getElementById('fc-cat-'+slug(c));if(el)el.textContent=byCat[c]||0;});
+  ['rule','ai'].forEach(s=>{const el=document.getElementById('fc-src-'+s);if(el)el.textContent=bySrc[s]||0;});
+
+  document.getElementById('resultCount').textContent=`显示 ${filtered.length} / ${allFindings.length} 条`;
+  renderTable();
+  renderPagination();
+}
+
+function renderTable(){
+  const start=(currentPage-1)*PAGE_SIZE;
+  const page=filtered.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById('tableBody');
+  if(!page.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="icon">✅</div><div>没有找到匹配的问题</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML=page.map((f,i)=>{
+    const idx=start+i;
+    const expanded=expandedRows.has(f.id);
+    const rows=[`<tr class="${expanded?'expanded':''}" onclick="toggleExpand('${f.id}',${idx})" style="cursor:pointer">
+      <td><span class="badge-sev badge-${SEV_CLASS[f.severity]||'low'}">${SEV_LABEL[f.severity]||f.severity}</span></td>
+      <td><span class="badge-cat">${CAT_LABEL[f.category]||f.category}</span></td>
+      <td><span class="file-path">${escHtml(f.file)}<span class="loc">:${f.line}</span></span></td>
+      <td><span class="matched-word">${escHtml(f.matched||'')}</span></td>
+      <td><span class="suggestion">${escHtml(f.suggestion||'—')}</span></td>
+      <td><span class="badge-src ${f.source==='ai'?'ai':''}">${f.source==='ai'?'AI':'规则'}</span></td>
+      <td><button class="expand-btn" onclick="event.stopPropagation();toggleExpand('${f.id}',${idx})">${expanded?'▲':'▼'}</button></td>
+    </tr>`];
+    if(expanded){
+      rows.push(`<tr class="expand-row" id="exp-${f.id}"><td colspan="7"><div class="expand-cell">
+        <div class="reason"><strong>问题说明：</strong>${escHtml(f.reason||'')}</div>
+        ${f.surrounding?`<div style="margin-top:8px"><strong>上下文：</strong><div class="surrounding">${escHtml(f.surrounding)}</div></div>`:''}
+        <div class="meta-row">
+          ${f.legalRef?`<span>📖 ${escHtml(f.legalRef)}</span>`:''}
+          ${f.rulePack?`<span>📦 ${escHtml(f.rulePack)}</span>`:''}
+          ${f.pageHint?`<span>📄 ${escHtml(f.pageHint)}</span>`:''}
+        </div>
+      </div></td></tr>`);
+    }
+    return rows.join('');
+  }).join('');
+}
+
+window.toggleExpand=function(id){
+  if(expandedRows.has(id))expandedRows.delete(id); else expandedRows.add(id);
+  renderTable();
+};
+
+function renderPagination(){
+  const total=Math.ceil(filtered.length/PAGE_SIZE);
+  if(total<=1){document.getElementById('pagination').innerHTML='';return;}
+  let pages=[];
+  if(total<=7){for(let i=1;i<=total;i++)pages.push(i);}
+  else{
+    pages=[1];
+    if(currentPage>3)pages.push('...');
+    for(let i=Math.max(2,currentPage-1);i<=Math.min(total-1,currentPage+1);i++)pages.push(i);
+    if(currentPage<total-2)pages.push('...');
+    pages.push(total);
+  }
+  document.getElementById('pagination').innerHTML=`
+    <button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>←</button>
+    ${pages.map(p=>typeof p==='number'?`<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`:'<span style="padding:0 4px">…</span>').join('')}
+    <button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===total?'disabled':''}>→</button>`;
+}
+
+window.goPage=function(p){
+  const total=Math.ceil(filtered.length/PAGE_SIZE);
+  if(p<1||p>total)return;
+  currentPage=p;
+  renderTable();renderPagination();
+  window.scrollTo({top:0,behavior:'smooth'});
+};
+
+function escHtml(str){
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function slug(str){
+  return String(str||'')
+    .replace(/[^\w\u4e00-\u9fff-]+/g,'-')
+    .replace(/^-+|-+$/g,'') || 'unknown';
+}
+
+window.addEventListener('DOMContentLoaded',init);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+{
+  "name": "@anmei/text-govern",
+  "version": "0.1.0",
+  "description": "自动化文案治理 CLI + AI Skill —— 静态扫描 + 规则匹配 + AI 语义分析 + HTML 整改报告，支持 Cursor / Claude Code / Codex",
+  "main": "bin/text-govern.js",
+  "bin": {
+    "text-govern": "./bin/text-govern.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "config",
+    "skills",
+    "commands",
+    "templates",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node ./test/text-govern.behavior.test.js",
+    "build:defaults": "node scripts/build-default-rules.js",
+    "prepublishOnly": "node scripts/build-default-rules.js && npm test"
+  },
+  "keywords": [
+    "text-govern",
+    "content-governance",
+    "cursor-skill",
+    "claude-skill",
+    "codex-skill",
+    "chinese-banned-words",
+    "wechat-miniprogram-lint",
+    "ai-lint",
+    "文案治理",
+    "违禁词",
+    "广告法"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anmei/shang-dai-bao.git",
+    "directory": "scripts/text-govern"
+  },
+  "homepage": "https://github.com/anmei/shang-dai-bao/tree/main/scripts/text-govern#readme",
+  "bugs": {
+    "url": "https://github.com/anmei/shang-dai-bao/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/types": "^7.24.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "fast-glob": "^3.3.2",
+    "micromatch": "^4.0.7",
+    "xlsx": "^0.18.5"
+  },
+  "optionalDependencies": {
+    "@vue/compiler-sfc": "^3.4.0",
+    "parse5": "^7.1.2"
+  }
+}
