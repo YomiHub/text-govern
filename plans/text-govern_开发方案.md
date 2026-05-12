@@ -34,7 +34,7 @@ lastUpdated: 2026-05-12
 
 ```text
 scripts/text-govern/
-├── package.json              # 可发布 npm 包（@anmei/text-govern，含 bin 入口）
+├── package.json              # 可发布 npm 包（@bf/text-govern，含 bin 入口）
 ├── LICENSE                   # MIT
 ├── README.md                 # 使用手册
 ├── bin/
@@ -321,7 +321,7 @@ module.exports = {
 ### 三层架构
 
 ```
-@anmei/text-govern (npm 包)
+@bf/text-govern (npm 包)
 │
 ├── Layer 1: CLI bin (bin/text-govern.js)
 │   纯算法、无 AI 依赖、可跑 CI
@@ -421,11 +421,11 @@ Agent 严格按 `prompts/generate-rules.md` 执行，**角色 = 合规审核 + �
 
 包形态（v3）：
 
-- `name`: `@anmei/text-govern`，`version`: `0.1.0`
+- `name`: `@bf/text-govern`，`version`: `0.1.0`
 - `bin`: `{ "text-govern": "./bin/text-govern.js" }`
 - `files`: `["bin", "lib", "config", "skills", "commands", "templates", "scripts", "README.md", "LICENSE"]`
 - `prepublishOnly`: `node scripts/build-default-rules.js && npm test`
-- 通过 `npx @anmei/text-govern install` 分发 Skill + Slash 命令
+- 通过 `npx @bf/text-govern install` 分发 Skill + Slash 命令
 
 ---
 
@@ -434,7 +434,7 @@ Agent 严格按 `prompts/generate-rules.md` 执行，**角色 = 合规审核 + �
 `test/text-govern.behavior.test.js`（`npm test` 运行）覆盖 10 项：
 
 1. `init` 默认生成空的 Excel 模板 + Markdown README，industry 默认为空字符串
-2. `package.json` 为可发布 CLI 包（`@anmei/text-govern`，含 bin/files/prepublishOnly）
+2. `package.json` 为可发布 CLI 包（`@bf/text-govern`，含 bin/files/prepublishOnly）
 3. 中文 severity / category 在 `severity.js` 中正确归一化与统计
 4. AI 生成的 Excel 规则可被 loader 正确加载
 5. 内置默认规则从 `config/*.default.xlsx` 加载，覆盖 广告法极限词 / 金融合规 / 医疗合规 三类
@@ -457,7 +457,7 @@ Agent 严格按 `prompts/generate-rules.md` 执行，**角色 = 合规审核 + �
 | 内置默认规则 | `defaults.js` 硬编码 | `config/*.default.xlsx` | 同 v2 |
 | 规则格式 | Markdown 优先 | Excel 优先，Markdown 兼容 | 同 v2 |
 | 规则生成视角 | 合规 + 行业 | 6 维度（含 UX/品牌/语义） | 同 v2 |
-| 包名 / 形态 | 局部脚本（private） | `text-govern`（bin 入口） | `@anmei/text-govern`（含 files/prepublishOnly） |
+| 包名 / 形态 | 局部脚本（private） | `text-govern`（bin 入口） | `@bf/text-govern`（含 files/prepublishOnly） |
 | Skill | 无 | Cursor Skill | Cursor + Claude Code + Codex Skill（disable-model-invocation） |
 | Slash 命令 | 无 | 无 | 6 条（text-govern / -init / -rules / -scan / -analyze / -report） |
 | 安装器 | 无 | 无 | `text-govern install`（--editor/--scope/--force/--dry-run） |
@@ -466,9 +466,9 @@ Agent 严格按 `prompts/generate-rules.md` 执行，**角色 = 合规审核 + �
 
 ## 十四、后续演进方向
 
-- 正式发布 `@anmei/text-govern` 到 npm public registry（当前已可 `npm publish --dry-run` 验证）
-- 抽离为独立 git 仓库（`anmei/text-govern`），通过 `npm link` 引入各业务项目
-- 自带预设词库子包（如 `@anmei/text-govern-rules-cn-baseline`），供 `rules.includeDefaults` 之外的可选叠加
+- 正式发布 `@bf/text-govern` 到 npm public registry（当前已可 `npm publish --dry-run` 验证）
+- 抽离为独立 git 仓库（例如 `bf/text-govern`，与 `@bf/text-govern` 包名对齐），通过 `npm link` 引入各业务项目
+- 自带预设词库子包（如 `@bf/text-govern-rules-cn-baseline`），供 `rules.includeDefaults` 之外的可选叠加
 - 支持 `text-govern watch` 在开发期增量提示
 - 接入 PR 评论：CI 中跑 analyze → 在 PR 上写差异化整改清单
 - 后续考虑 stdio MCP 模式，让 Cursor/Claude Desktop 直接以工具形式调用 CLI

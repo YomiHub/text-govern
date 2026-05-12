@@ -8,7 +8,7 @@ description: "text-govern 全流程文案治理：扫描源码 → 规则匹配 
 
 ## 前置检查
 
-1. 确认 `text-govern --version` 可用；不可用则提示用户运行 `npx @anmei/text-govern install`
+1. 确认 `text-govern --version` 可用；不可用则提示用户运行 `npx @bf/text-govern install`
 2. 确认项目根存在 `text-govern.config.js`；不存在则先执行 `text-govern init`
 
 ## 步骤 1 — 静态扫描

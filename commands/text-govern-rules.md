@@ -8,7 +8,7 @@ description: "用 text-govern 按 6 维度（合规底线/品牌调性/术语统
 
 ## 前置检查（按顺序）
 
-1. 确认 `text-govern --version` 可用；不可用则提示 `npx @anmei/text-govern install`
+1. 确认 `text-govern --version` 可用；不可用则提示 `npx @bf/text-govern install`
 2. 确认项目根存在 `text-govern.config.js`；不存在则先执行 `text-govern init`（或 `/text-govern-init`）
 3. 确认 `.text-govern/extracted.json` 存在；不存在则先运行 `text-govern scan`（或 `/text-govern-scan`）
 

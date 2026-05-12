@@ -1,5 +1,5 @@
 {
-  "name": "@anmei/text-govern",
+  "name": "@bf/text-govern",
   "version": "0.1.0",
   "description": "自动化文案治理 CLI + AI Skill —— 静态扫描 + 规则匹配 + AI 语义分析 + HTML 整改报告，支持 Cursor / Claude Code / Codex",
   "main": "bin/text-govern.js",
@@ -37,12 +37,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/anmei/shang-dai-bao.git",
+    "url": "https://github.com/YomiHub/text-govern.git",
     "directory": "scripts/text-govern"
   },
-  "homepage": "https://github.com/anmei/shang-dai-bao/tree/main/scripts/text-govern#readme",
+  "homepage": "https://github.com/YomiHub/text-govern/tree/main/scripts/text-govern#readme",
   "bugs": {
-    "url": "https://github.com/anmei/shang-dai-bao/issues"
+    "url": "https://github.com/YomiHub/text-govern/issues"
   },
   "license": "MIT",
   "engines": {

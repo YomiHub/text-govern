@@ -1,4 +1,4 @@
-# @anmei/text-govern
+# @bf/text-govern
 
 自动化文案治理 CLI + AI Skill。静态扫描源码、规则匹配、AI 语义分析、生成 HTML 整改报告；规则以 Excel 为一等公民，支持通过 `/text-govern-*` slash 命令在 Cursor / Claude Code / Codex 中直接触发。
 
@@ -8,13 +8,13 @@
 
 ```bash
 # 把 Skill + Slash 命令铺设到当前项目的 .cursor / .claude / .codex 目录
-npx @anmei/text-govern install
+npx @bf/text-govern install
 
 # 只装 Cursor
-npx @anmei/text-govern install --editor cursor
+npx @bf/text-govern install --editor cursor
 
 # 装到用户全局（对所有项目生效）
-npx @anmei/text-govern install --scope global
+npx @bf/text-govern install --scope global
 ```
 
 安装后在 Cursor 输入 `/text-govern-init` 开始使用。
@@ -22,18 +22,32 @@ npx @anmei/text-govern install --scope global
 ### 方式二：全局安装
 
 ```bash
-npm install -g @anmei/text-govern
+npm install -g @bf/text-govern
 text-govern install
 ```
 
-### 方式三：当前仓库内置版本（开发中）
+### 方式三：当前 monorepo 内置源码（本地开发）
+
+本仓库 **`package.json` 根目录未挂载 `npm run text-govern:*` 脚本**时，请直接用 **`node` 指向 CLI 入口**（工作目录始终在**业务项目根**，即微信小程序仓库根）。
 
 ```bash
-cd scripts/text-govern
-npm install
-cd ../..
-npm run text-govern:install
+# 1) 一次性安装 CLI 包依赖（在 text-govern 子目录）
+cd scripts/text-govern && npm install
+
+# 2) 在业务项目根（本 monorepo 一般为仓库根目录，含 app.json 与 scripts/text-govern/）
+node scripts/text-govern/bin/text-govern.js install --editor cursor,claude
+# 预览不写盘：node scripts/text-govern/bin/text-govern.js install --dry-run --editor cursor
+
+# 3) 日常 CLI（均在项目根执行）
+node scripts/text-govern/bin/text-govern.js init
+node scripts/text-govern/bin/text-govern.js scan
+node scripts/text-govern/bin/text-govern.js analyze
+node scripts/text-govern/bin/text-govern.js report
 ```
+
+可选：若希望 Shell 里直接打 `text-govern`（免写长路径），可在 `scripts/text-govern` 下执行 **`npm link`**，全局链到当前开发版二进制。
+
+如需重新生成内置默认 Excel，可在 `scripts/text-govern` 下执行：**`npm run build:defaults`**；跑回归测试：**`npm test`**。
 
 ## Slash 命令一览
 
@@ -79,7 +93,7 @@ Options:
 ## 三层架构
 
 ```
-@anmei/text-govern
+@bf/text-govern
 ├── Layer 1: CLI bin          纯算法层，无 AI 依赖，可跑 CI
 │   bin/text-govern.js
 ├── Layer 2: Skill            AI 编排说明书，跨编辑器复用
@@ -203,7 +217,7 @@ Sheet 名：`业务语义`
 
 ```
 # 1. 在新项目安装
-npx @anmei/text-govern install
+npx @bf/text-govern install
 
 # 2. 初始化（在 IDE 里或命令行）
 text-govern init           # 或 /text-govern-init
