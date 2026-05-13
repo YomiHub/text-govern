@@ -43,7 +43,11 @@ async function testInitCreatesReusableEmptyExcelTemplates() {
 function testPackageIsReusableCliPackage() {
   const pkg = require('../package.json');
   assert.notStrictEqual(pkg.private, true, 'package should not be private so it can be published or npm linked');
-  assert.strictEqual(pkg.bin && pkg.bin['text-govern'], './bin/text-govern.js');
+  const binPath = pkg.bin && pkg.bin['text-govern'];
+  assert.ok(
+    binPath === 'bin/text-govern.js' || binPath === './bin/text-govern.js',
+    `bin entry should point to bin/text-govern.js, got: ${binPath}`
+  );
 }
 
 function testChineseSeverityAndCategoryArePreserved() {

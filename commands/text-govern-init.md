@@ -6,7 +6,7 @@ description: "初始化 text-govern：创建 text-govern.config.js、text-govern
 
 ## 前置检查
 
-确认 `text-govern --version` 可用；不可用则提示用户运行 `npx @bf/text-govern install`。
+确认 `text-govern --version` 可用；不可用则提示用户运行 `npx text-govern install`。
 
 ## 执行
 

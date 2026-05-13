@@ -1,4 +1,4 @@
-# @bf/text-govern
+# text-govern
 
 自动化文案治理 CLI + AI Skill。静态扫描源码、规则匹配、AI 语义分析、生成 HTML 整改报告；规则以 Excel 为一等公民，支持通过 `/text-govern-*` slash 命令在 Cursor / Claude Code / Codex 中直接触发。
 
@@ -8,13 +8,13 @@
 
 ```bash
 # 把 Skill + Slash 命令铺设到当前项目的 .cursor / .claude / .codex 目录
-npx @bf/text-govern install
+npx text-govern install
 
 # 只装 Cursor
-npx @bf/text-govern install --editor cursor
+npx text-govern install --editor cursor
 
 # 装到用户全局（对所有项目生效）
-npx @bf/text-govern install --scope global
+npx text-govern install --scope global
 ```
 
 安装后在 Cursor 输入 `/text-govern-init` 开始使用。
@@ -22,7 +22,7 @@ npx @bf/text-govern install --scope global
 ### 方式二：全局安装
 
 ```bash
-npm install -g @bf/text-govern
+npm install -g text-govern
 text-govern install
 ```
 
@@ -53,14 +53,14 @@ node scripts/text-govern/bin/text-govern.js report
 
 安装后在 Cursor / Claude Code 的 Agent 对话框中输入：
 
-| 命令 | 说明 | 是否需要 AI |
-|------|------|------------|
-| `/text-govern` | 全流程：扫描 → 规则匹配 → AI 语义分析 → HTML 报告 | 是 |
-| `/text-govern-init` | 初始化配置与模板 | 否 |
-| `/text-govern-rules` | AI 按 6 维度生成 Excel 规则库 | 是 |
-| `/text-govern-scan` | 扫描源码，提取中文文案片段 | 否 |
-| `/text-govern-analyze` | 规则匹配分析，输出 findings.rule.json | 否 |
-| `/text-govern-report` | AI 语义分析 + 生成 HTML 报告 | 是 |
+| 命令                   | 说明                                              | 是否需要 AI |
+| ---------------------- | ------------------------------------------------- | ----------- |
+| `/text-govern`         | 全流程：扫描 → 规则匹配 → AI 语义分析 → HTML 报告 | 是          |
+| `/text-govern-init`    | 初始化配置与模板                                  | 否          |
+| `/text-govern-rules`   | AI 按 6 维度生成 Excel 规则库                     | 是          |
+| `/text-govern-scan`    | 扫描源码，提取中文文案片段                        | 否          |
+| `/text-govern-analyze` | 规则匹配分析，输出 findings.rule.json             | 否          |
+| `/text-govern-report`  | AI 语义分析 + 生成 HTML 报告                      | 是          |
 
 Codex 已弃用 custom prompts，统一通过加载 Skill 触发（输入「用 text-govern 跑 rules」即可）。
 
@@ -93,7 +93,7 @@ Options:
 ## 三层架构
 
 ```
-@bf/text-govern
+text-govern
 ├── Layer 1: CLI bin          纯算法层，无 AI 依赖，可跑 CI
 │   bin/text-govern.js
 ├── Layer 2: Skill            AI 编排说明书，跨编辑器复用
@@ -108,11 +108,11 @@ Options:
 
 ## 跨编辑器兼容矩阵
 
-| 编辑器 | Skill 载体 | Slash 命令 | 安装后自动探测 |
-|--------|-----------|-----------|--------------|
-| Cursor | `.cursor/skills/text-govern/SKILL.md` | `.cursor/commands/text-govern*.md` | 是（检测 `.cursor/` 目录） |
+| 编辑器      | Skill 载体                            | Slash 命令                         | 安装后自动探测             |
+| ----------- | ------------------------------------- | ---------------------------------- | -------------------------- |
+| Cursor      | `.cursor/skills/text-govern/SKILL.md` | `.cursor/commands/text-govern*.md` | 是（检测 `.cursor/` 目录） |
 | Claude Code | `.claude/skills/text-govern/SKILL.md` | `.claude/commands/text-govern*.md` | 是（检测 `.claude/` 目录） |
-| Codex | `.codex/skills/text-govern/SKILL.md` | 不铺（已弃用 prompts） | 是（检测 `.codex/` 目录） |
+| Codex       | `.codex/skills/text-govern/SKILL.md`  | 不铺（已弃用 prompts）             | 是（检测 `.codex/` 目录）  |
 
 ## 配置
 
@@ -120,16 +120,16 @@ Options:
 // text-govern.config.js（在项目根目录）
 module.exports = {
   // 可留空，让 AI 根据源码判断；也可填任意中文业务描述
-  industry: '医药系统中的代理商专用商贷宝系统',
+  industry: "医药系统中的代理商专用商贷宝系统",
 
   scan: {
-    include: ['pages/**', 'packageA/**', 'packageB/**', 'packageC/**', 'components/**', 'app.json'],
-    exclude: ['node_modules/**', 'miniprogram_npm/**', '.text-govern/**', '**/*.test.js'],
-    adapters: ['wxml', 'js', 'json'],
+    include: ["pages/**", "packageA/**", "packageB/**", "packageC/**", "components/**", "app.json"],
+    exclude: ["node_modules/**", "miniprogram_npm/**", ".text-govern/**", "**/*.test.js"],
+    adapters: ["wxml", "js", "json"],
   },
 
-  customRules:  { dir: './text-govern-rules/custom' },
-  builtinRules: { dir: './text-govern-rules/generated' },
+  customRules: { dir: "./text-govern-rules/custom" },
+  builtinRules: { dir: "./text-govern-rules/generated" },
 
   rules: {
     // 是否启用内置默认词库（config/*.default.xlsx）
@@ -137,13 +137,13 @@ module.exports = {
     includeDefaults: false,
   },
 
-  output: { dir: './.text-govern' },
+  output: { dir: "./.text-govern" },
 
   severity: {
     // 严重违禁 | 高风险 | 需关注 | 推荐修改 | none
-    failOn: '严重违禁',
+    failOn: "严重违禁",
   },
-};
+}
 ```
 
 ## 规则三层与优先级
@@ -184,8 +184,8 @@ module.exports = {
 
 Sheet 名：`违禁违规词`
 
-| 词 | 替换建议 | 风险等级 | 分类 | 法规来源 | 备注 |
-|---|---|---|---|---|---|
+| 词  | 替换建议 | 风险等级 | 分类 | 法规来源 | 备注 |
+| --- | -------- | -------- | ---- | -------- | ---- |
 
 - `风险等级` 和 `分类` 均为中文自由值
 - 推荐风险等级：`严重违禁` / `高风险` / `需关注` / `推荐修改`
@@ -195,29 +195,29 @@ Sheet 名：`违禁违规词`
 Sheet 名：`术语统一`
 
 | 标准词 | 别名（逗号分隔） | 备注 |
-|---|---|---|
+| ------ | ---------------- | ---- |
 
 ### semantic.xlsx — 业务语义
 
 Sheet 名：`业务语义`
 
 | 页面/路径 glob | 字段含义 | 禁用替代词 | 推荐词 | 备注 |
-|---|---|---|---|---|
+| -------------- | -------- | ---------- | ------ | ---- |
 
 ## 输出文件
 
-| 文件 | 说明 |
-|------|------|
-| `.text-govern/extracted.json` | 文案提取结果 |
-| `.text-govern/findings.rule.json` | 规则匹配结果 |
-| `.text-govern/findings.ai.json` | AI 语义分析结果 |
-| `.text-govern/report.html` | 自包含 HTML 整改报告（可直接浏览器打开） |
+| 文件                              | 说明                                     |
+| --------------------------------- | ---------------------------------------- |
+| `.text-govern/extracted.json`     | 文案提取结果                             |
+| `.text-govern/findings.rule.json` | 规则匹配结果                             |
+| `.text-govern/findings.ai.json`   | AI 语义分析结果                          |
+| `.text-govern/report.html`        | 自包含 HTML 整改报告（可直接浏览器打开） |
 
 ## 推荐工作流
 
 ```
 # 1. 在新项目安装
-npx @bf/text-govern install
+npx text-govern install
 
 # 2. 初始化（在 IDE 里或命令行）
 text-govern init           # 或 /text-govern-init
@@ -237,11 +237,99 @@ text-govern scan && text-govern analyze && text-govern report
 
 ## 文件类型支持
 
-| 适配器 | 文件扩展名 | 说明 |
-|--------|----------|------|
-| `wxml` | `.wxml` | 微信小程序模板 |
-| `js` | `.js` `.wxs` | JS + Babel AST |
-| `json` | `.json` | JSON 值提取 |
-| `vue` | `.vue` | Vue SFC（需 `@vue/compiler-sfc`） |
-| `jsx` | `.jsx` `.tsx` | JSX（需 `@babel/parser`，已内置） |
-| `html` | `.html` `.htm` | HTML（需 `parse5`） |
+| 适配器 | 文件扩展名     | 说明                              |
+| ------ | -------------- | --------------------------------- |
+| `wxml` | `.wxml`        | 微信小程序模板                    |
+| `js`   | `.js` `.wxs`   | JS + Babel AST                    |
+| `json` | `.json`        | JSON 值提取                       |
+| `vue`  | `.vue`         | Vue SFC（需 `@vue/compiler-sfc`） |
+| `jsx`  | `.jsx` `.tsx`  | JSX（需 `@babel/parser`，已内置） |
+| `html` | `.html` `.htm` | HTML（需 `parse5`）               |
+
+# 本包发包流程
+
+## 一、一次性准备
+
+注册 npm 账号
+在 npmjs.com 注册并登录。
+
+本机登录
+
+```bash
+npm logout --registry=https://registry.npmjs.org/
+
+npm login --auth-type=legacy --registry=https://registry.npmjs.org/
+或者
+# 1. 设置 token（在 npmjs.com 生成后）
+npm config set //registry.npmjs.org/:_authToken npm_你的TokenHere
+# 2. 确认登录账号
+npm whoami --registry=https://registry.npmjs.org/
+
+确认包名未被占用（你当前包名是 text-govern）
+
+npm view text-govern version
+若返回版本号：说明已被别人占用，需改 package.json 里的 name 再发布。
+若 404 / E404：通常表示可尝试占用（仍以发布时 npm 为准）。
+进入包目录并安装依赖
+
+cd scripts/text-govern
+npm install
+```
+
+## 二、发布前自检（强烈建议）
+
+跑测试与构建（你项目里 prepublishOnly 会在发布时自动跑）
+
+```bash
+cd scripts/text-govern
+npm run build:defaults   # 可选，与 prepublish 一致
+npm test
+看将要打进包的文件
+
+npm pack --dry-run
+确认第一行是 text-govern@x.y.z，且 bin、lib、commands 等都在列表里。
+
+（可选）模拟发布
+
+npm publish --dry-run --registry=https://registry.npmjs.org/
+```
+
+## 三、正式发布
+
+无 scope 的公开包：
+
+```bash
+cd scripts/text-govern
+npm publish --registry=https://registry.npmjs.org/
+
+一次性验证码
+npm publish --access public --registry=https://registry.npmjs.org/ --otp
+
+不需要 npm publish --access public（那是给 scoped 包 @xxx/pkg 首次公开用的）。
+若账号开了 2FA，按 npm 提示在浏览器或 OTP 完成验证。
+发布后几秒到几分钟内，-registry 上会能看到包页：https://www.npmjs.com/package/text-govern（名称以你 package.json 为准）。
+
+核对
+npm view text-govern version
+```
+
+## 四、别人怎么用（你的目标）
+
+```bash
+npx text-govern install
+npx text-govern scan
+# 或固定版本
+npx text-govern@0.1.0 install
+npx 会按需从 registry 拉包并执行 bin 里的 text-govern。
+```
+
+## 五、以后发新版本
+
+```bash
+cd scripts/text-govern
+npm version patch    # 或 minor / major
+npm publish
+（npm version 会改 package.json/package-lock.json 版本并打 git tag；若不想动 git，也可手改版本号后再 npm publish。）
+```
+
+**发布说明**：未限定作用域的包使用 `npm publish` 即可公开发布；只有带 `@scope/` 的包首次发布才需要 `npm publish --access public`。

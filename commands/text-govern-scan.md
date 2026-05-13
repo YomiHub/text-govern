@@ -6,7 +6,7 @@ description: "用 text-govern 扫描项目源码，提取所有中文文案片�
 
 ## 前置检查
 
-确认 `text-govern --version` 可用；不可用则提示 `npx @bf/text-govern install`。
+确认 `text-govern --version` 可用；不可用则提示 `npx text-govern install`。
 
 ## 执行
 
