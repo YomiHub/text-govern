@@ -53,14 +53,14 @@ node scripts/text-govern/bin/text-govern.js report
 
 安装后在 Cursor / Claude Code 的 Agent 对话框中输入：
 
-| 命令                   | 说明                                              | 是否需要 AI |
-| ---------------------- | ------------------------------------------------- | ----------- |
-| `/text-govern`         | 全流程：扫描 → 规则匹配 → AI 语义分析 → HTML 报告 | 是          |
-| `/text-govern-init`    | 初始化配置与模板                                  | 否          |
-| `/text-govern-rules`   | AI 按 6 维度生成 Excel 规则库                     | 是          |
-| `/text-govern-scan`    | 扫描源码，提取中文文案片段                        | 否          |
-| `/text-govern-analyze` | 规则匹配分析，输出 findings.rule.json             | 否          |
-| `/text-govern-report`  | AI 语义分析 + 生成 HTML 报告                      | 是          |
+| 命令                   | 说明                                                                   | 是否需要 AI |
+| ---------------------- | ---------------------------------------------------------------------- | ----------- |
+| `/text-govern`         | 已init和生成rules后走全流程：扫描 → 规则匹配 → AI 语义分析 → HTML 报告 | 是          |
+| `/text-govern-init`    | 初始化配置与模板                                                       | 否          |
+| `/text-govern-rules`   | AI 按 6 维度生成 Excel 规则库                                          | 是          |
+| `/text-govern-scan`    | 扫描源码，提取中文文案片段                                             | 否          |
+| `/text-govern-analyze` | 规则匹配分析，输出 findings.rule.json                                  | 否          |
+| `/text-govern-report`  | AI 语义分析 + 生成 HTML 报告                                           | 是          |
 
 Codex 已弃用 custom prompts，统一通过加载 Skill 触发（输入「用 text-govern 跑 rules」即可）。
 
@@ -215,12 +215,14 @@ Sheet 名：`业务语义`
 
 ## 推荐工作流
 
+若未全局安装 CLI，将下面命令中的 `text-govern` 换成 `npx -y text-govern`；或使用本仓库内置 CLI：`node scripts/text-govern/bin/text-govern.js`（与 Slash 命令中的 **TG_CMD** 解析规则一致）。
+
 ```
 # 1. 在新项目安装
 npx text-govern install
 
 # 2. 初始化（在 IDE 里或命令行）
-text-govern init           # 或 /text-govern-init
+text-govern init           # 或 /text-govern-init；无全局命令时：npx -y text-govern init
 
 # 3. 生成规则库（在 Cursor/Claude Code 里）
 /text-govern-rules         # AI 读取源码，按 6 维度生成 Excel
@@ -232,7 +234,7 @@ git commit -m "feat: 初始化文案治理规则库"
 # 5. 日常检查（在 IDE 里或 CI）
 /text-govern               # 完整流程
 # 或
-text-govern scan && text-govern analyze && text-govern report
+text-govern scan && text-govern analyze && text-govern report   # 无全局时前缀同上
 ```
 
 ## 文件类型支持
@@ -327,9 +329,20 @@ npx 会按需从 registry 拉包并执行 bin 里的 text-govern。
 
 ```bash
 cd scripts/text-govern
-npm version patch    # 或 minor / major
-npm publish
+
+# 发布前自检（与 prepublishOnly 一致；publish 时也会再跑一遍）
+npm run build:defaults   # 可选，与 prepublish 一致
+npm test
+npm pack --dry-run       # 确认包内容与版本
+
+# 升小版本号（0.1.0 → 0.1.1）
+npm version patch    # patch（小修复、不影响功能）或 minor（新增功能、向下兼容） / major（大改版、不兼容旧版本）
+
+npm publish --registry=https://registry.npmjs.org/
 （npm version 会改 package.json/package-lock.json 版本并打 git tag；若不想动 git，也可手改版本号后再 npm publish。）
+
+核对线上版本
+npm view text-govern version
 ```
 
 **发布说明**：未限定作用域的包使用 `npm publish` 即可公开发布；只有带 `@scope/` 的包首次发布才需要 `npm publish --access public`。

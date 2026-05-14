@@ -15,7 +15,7 @@ disable-model-invocation: true
 | 入口 | 执行分支 |
 |------|---------|
 | `/text-govern` | 全流程：步骤 1 → 5 |
-| `/text-govern-init` | 仅 `text-govern init`，完成后告知下一步 |
+| `/text-govern-init` | 仅 `TG_CMD init`（TG_CMD 见「前置检查」），完成后告知下一步 |
 | `/text-govern-scan` | 仅步骤 1（静态扫描） |
 | `/text-govern-analyze` | 仅步骤 2（规则匹配） |
 | `/text-govern-report` | 步骤 3（AI 语义）+ 步骤 4（生成报告）+ 步骤 5（汇报） |
@@ -24,16 +24,22 @@ disable-model-invocation: true
 
 ## 前置检查
 
-1. 确认 `text-govern --version` 可用（适配独立 npm 包 + `npm link`）
-2. 如当前项目使用内置脚本，确认 `scripts/text-govern/package.json` 存在，必要时运行 `cd scripts/text-govern && npm install`
-3. 如 `text-govern.config.js` 不存在，先运行 `text-govern init` 并让用户确认配置
+1. **解析 CLI 前缀（TG_CMD）**：在**项目根目录**下按顺序尝试，**任一步成功即得到 TG_CMD 并继续，不要中断**；仅当四步均失败时再提示安装。
+   - `text-govern --version` 成功 → **TG_CMD** = `text-govern`
+   - 否则 `npx -y text-govern --version` 成功 → **TG_CMD** = `npx -y text-govern`
+   - 否则若存在 `scripts/text-govern/bin/text-govern.js`，且 `node scripts/text-govern/bin/text-govern.js --version` 成功 → **TG_CMD** = `node scripts/text-govern/bin/text-govern.js`
+   - 均失败 → 提示用户：先 `npx text-govern install`（仅铺设 Slash/Skill，**不会**把 `text-govern` 加入 PATH）；再安装可执行 CLI — `npm install -g text-govern`，或在项目根用 `npx -y text-govern --version` 验证后重试。
+2. **仅当 TG_CMD 为 `node scripts/text-govern/bin/text-govern.js`** 且 `scripts/text-govern/node_modules` 不存在时：确认 `scripts/text-govern/package.json` 存在，并运行 `cd scripts/text-govern && npm install`
+3. 如 `text-govern.config.js` 不存在，先运行 `TG_CMD init` 并让用户确认配置
+
+**说明**：下文 `TG_CMD <子命令>` 表示把 **TG_CMD** 替换为步骤 1 得到的**整条前缀**后执行；展开示例：`text-govern scan` / `npx -y text-govern scan` / `node scripts/text-govern/bin/text-govern.js scan`（只执行与探测结果一致的那一条）。
 
 ## 全流程（步骤 1 ~ 5）
 
 ### 步骤 1 — 静态扫描
 
 ```bash
-text-govern scan
+TG_CMD scan
 ```
 
 汇报：扫描文件数 / 提取片段数 / 解析失败文件。
@@ -41,7 +47,7 @@ text-govern scan
 ### 步骤 2 — 规则匹配分析
 
 ```bash
-text-govern analyze
+TG_CMD analyze
 ```
 
 汇报：违禁/行业词命中数 / 术语不统一数 / 语义歧义数。
@@ -60,7 +66,7 @@ text-govern analyze
 ### 步骤 4 — 生成 HTML 报告
 
 ```bash
-text-govern report
+TG_CMD report
 ```
 
 ### 步骤 5 — 总结
@@ -81,9 +87,9 @@ text-govern report
 
 ### 步骤 A · 环境与配置确认
 
-1. 运行 `text-govern init` 确保目录/配置就绪
+1. 运行 `TG_CMD init` 确保目录/配置就绪
 2. 读取 `text-govern.config.js` 中的 `industry`：留空则从源码/路由自行判断；非空则作为业务上下文
-3. 确保 `.text-govern/extracted.json` 存在；不存在则先 `text-govern scan`
+3. 确保 `.text-govern/extracted.json` 存在；不存在则先 `TG_CMD scan`
 
 ### 步骤 B · 业务画像（必须先做，再写规则）
 
@@ -123,7 +129,7 @@ text-govern report
 1. 汇报每个 Excel 的条数、维度覆盖、典型样例（每类 1~2 条）
 2. 明确告知哪些维度没有输出规则、为什么
 3. 提示：`git add text-govern-rules/ && git commit -m "feat: 初始化文案治理规则库"`
-4. 提醒：业务同学可直接编辑 Excel，下一次 `text-govern analyze` 即生效
+4. 提醒：业务同学可直接编辑 Excel，下一次 `TG_CMD analyze` 即生效
 
 ---
 

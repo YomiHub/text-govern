@@ -217,7 +217,8 @@ async function run(opts = {}) {
     log(`安装完成！${installed} 个编辑器已就绪。`);
     console.log('');
     console.log('接下来：');
-    console.log('  1. 在项目根运行 `text-govern init`（如还未初始化）');
+    console.log('  1. 在项目根运行 CLI 初始化（任选其一，与 README「方式一」一致时可不装全局）：');
+    console.log('     `text-govern init` 或 `npx -y text-govern init` 或 `node scripts/text-govern/bin/text-govern.js init`');
     console.log('  2. 在 IDE 中输入 `/text-govern-rules` 让 AI 生成项目规则库');
     console.log('  3. 确认规则后输入 `/text-govern` 跑完整文案治理流程');
     console.log('='.repeat(60));
