@@ -6,6 +6,8 @@
 
 ### 方式一：npx（推荐，免全局安装）
 
+- npx text-govern install --scope global 做的是把 Skill / Slash 命令「复制」到你本机用户目录下的 Cursor / Claude 等配置里，并不等价于「装了一个全局 npm 包」
+
 ```bash
 # 把 Skill + Slash 命令铺设到当前项目的 .cursor / .claude / .codex 目录
 npx text-govern install
@@ -15,6 +17,10 @@ npx text-govern install --editor cursor
 
 # 装到用户全局（对所有项目生效）
 npx text-govern install --scope global
+
+# 查看安装版本
+npx text-govern --version
+npx text-govern@latest install --scope global --force
 ```
 
 安装后在 Cursor 输入 `/text-govern-init` 开始使用。
@@ -24,6 +30,8 @@ npx text-govern install --scope global
 ```bash
 npm install -g text-govern
 text-govern install
+text-govern --version
+npm install -g text-govern@lates
 ```
 
 ### 方式三：当前 monorepo 内置源码（本地开发）
