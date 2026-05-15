@@ -85,6 +85,29 @@ TG_CMD report
 **你的角色 = 合规审核 + 产品经理 + 运营 + UX writer 复合体。**
 按 `skills/prompts/generate-rules.md` 的 6 维度完整执行，**不止合规**。
 
+### 输出契约（强制，违反任何一项须重做）
+
+生成文件路径：`text-govern-rules/generated/`
+
+| 文件 | Sheet 名（中文） | 必须包含的列（顺序不限，但列名必须完全一致） |
+|------|-----------------|------------------------------------------|
+| `banned.xlsx` | `违禁违规词` | `词` \| `替换建议` \| `风险等级` \| `分类` \| `法规来源` \| `备注` |
+| `terminology.xlsx` | `术语统一` | `标准词` \| `别名（逗号分隔）` \| `备注` |
+| `semantic.xlsx` | `业务语义` | `页面/路径 glob` \| `字段含义` \| `禁用替代词` \| `推荐词` \| `备注` |
+| `README.md` | —（Markdown） | 生成依据、规则条数、未输出维度说明 |
+
+取值约束：
+- `风险等级` 仅限：`严重违禁` / `高风险` / `需关注` / `推荐修改`
+- `分类` 必须使用中文（如：广告法极限词 / 金融合规 / 品牌一致性 / 用户体验）
+- `法规来源` 无依据必须留空，禁止杜撰
+- `备注` 写清证据片段或来源页面
+
+绝对禁止（触发即判失败，必须重做）：
+- 生成 `README.xlsx`（README 必须是 `.md` 格式）
+- 生成词汇统计、词频统计等任何与规则匹配无关的 Sheet
+- 使用英文风险等级（critical/high/medium/low）或英文分类（banned/finance）
+- 凭空生成与本项目源码无关的规则（通用词典轰炸）
+
 ### 步骤 A · 环境与配置确认
 
 1. 运行 `TG_CMD init` 确保目录/配置就绪
@@ -115,14 +138,22 @@ TG_CMD report
 
 ### 步骤 D · 写入 Excel + README.md
 
-写入 `text-govern-rules/generated/`：
+严格按「输出契约」写入 `text-govern-rules/generated/`，然后**必须运行**：
 
-- `banned.xlsx`（Sheet：`违禁违规词`）
-- `terminology.xlsx`（Sheet：`术语统一`）
-- `semantic.xlsx`（Sheet：`业务语义`）
-- `README.md`（必选，Markdown）
+```bash
+TG_CMD rules:verify
+```
 
-约束：`风险等级` 和 `分类` 必须中文；备注写清证据；不输出 `README.xlsx`。
+- 退出码 **0** → 继续步骤 E
+- 退出码 **非 0** → 禁止向用户汇报"完成"，将错误原文完整返给用户，修正后重跑写入+验证
+
+可选烟测（推荐执行，确认规则能被 analyze 正确加载）：
+
+```bash
+TG_CMD analyze
+```
+
+确认输出中 `rulesLoaded.banned/terminology/semantic` 总和 > 0。
 
 ### 步骤 E · 汇报与提交
 

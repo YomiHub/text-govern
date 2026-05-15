@@ -21,6 +21,8 @@ description: "初始化 text-govern：创建 text-govern.config.js、text-govern
 TG_CMD init
 ```
 
+**重要**：若 CLI 退出码非 0，必须将完整错误原文如实告知用户，禁止伪报成功。用户看到的状态必须与 CLI 实际结果一致。
+
 ## 完成后告知用户
 
 1. 已创建 `text-govern.config.js` — 可以编辑 `industry` 字段（留空让 AI 自动判断，或填写业务描述如"医药代理商 SaaS 系统"）

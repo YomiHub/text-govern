@@ -68,6 +68,17 @@ program
   });
 
 program
+  .command('rules:verify')
+  .description('严格校验 text-govern-rules/generated/ 是否符合 scan/analyze 消费契约')
+  .option('--cwd <dir>', '工作目录', process.cwd())
+  .option('--config <file>', '配置文件路径')
+  .option('--dir <dir>', '自定义校验目录（默认使用 config.builtinRules.dir）')
+  .action(async (opts) => {
+    const { run } = require('../lib/commands/rules-verify');
+    await run(opts);
+  });
+
+program
   .command('install')
   .description('把 text-govern Skill + Slash 命令部署到 Cursor / Claude Code / Codex')
   .option('--editor <list>', '编辑器列表（逗号分隔：cursor,claude,codex）；默认自动探测')
