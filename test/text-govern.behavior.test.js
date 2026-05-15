@@ -7,7 +7,7 @@ const path = require('path');
 const XLSX = require('xlsx');
 
 const { run: init } = require('../lib/commands/init');
-const { loadAllRules } = require('../lib/rules/loader');
+const { loadAllRules, loadBaselineRules } = require('../lib/rules/loader');
 const { buildStats, normalizeSeverity } = require('../lib/severity');
 
 function tempProject() {
@@ -100,14 +100,14 @@ function testAiGeneratedRulesCanBeExcel() {
 }
 
 function testDefaultsAreLoadedFromExcelConfig() {
-  const path = require('path');
   const defaults = require('../lib/rules/defaults');
 
-  assert.ok(defaults.BANNED_DEFAULTS.length > 30, '内置违禁词需覆盖中国大陆通用底线，至少 30+ 条');
+  assert.ok(defaults.BANNED_DEFAULTS.length > 30, '内置违禁词需覆盖公开敏感词基线，至少 30+ 条');
   assert.ok(defaults.TERMINOLOGY_DEFAULTS.length >= 5, '内置术语统一需要至少 5 条');
 
+  // Check categories from public baseline lexicons (not the old hardcoded list)
   const categories = new Set(defaults.BANNED_DEFAULTS.map((r) => r.category));
-  for (const required of ['广告法极限词', '金融合规', '医疗合规']) {
+  for (const required of ['色情违规', '政治敏感', '广告违规']) {
     assert.ok(categories.has(required), `内置默认违禁词需要覆盖分类: ${required}`);
   }
 
@@ -198,6 +198,189 @@ async function testInstallerDryRunWritesNothing() {
   );
 }
 
+// ── 新增：baseline 通道测试 ──────────────────────────────────────────────────
+
+function testLoadBaselineRulesReturnsEmptyWhenIncludeDefaultsFalse() {
+  const baseline = loadBaselineRules({
+    rules: { includeDefaults: false },
+  });
+  assert.deepStrictEqual(baseline.banned, [], 'includeDefaults=false: baseline.banned should be empty');
+  assert.deepStrictEqual(baseline.terminology, [], 'includeDefaults=false: baseline.terminology should be empty');
+  assert.deepStrictEqual(baseline.semantic, [], 'includeDefaults=false: baseline.semantic should be empty');
+}
+
+function testLoadBaselineRulesReturnsDataWhenIncludeDefaultsTrue() {
+  const defaults = require('../lib/rules/defaults');
+  // Only run if banned.default.xlsx exists (offline/CI may not have it yet until fetch:baseline runs)
+  if (defaults.BANNED_DEFAULTS.length === 0) {
+    console.log('  skip: banned.default.xlsx 不存在或为空，请先运行 npm run fetch:baseline');
+    return;
+  }
+
+  const baseline = loadBaselineRules({
+    rules: { includeDefaults: true },
+  });
+  assert.ok(baseline.banned.length > 0, 'includeDefaults=true: baseline.banned should have entries');
+}
+
+function testLoadAllRulesDoesNotIncludeBaselineWhenExcluded() {
+  const cwd = tempProject();
+  const generatedDir = path.join(cwd, 'text-govern-rules', 'generated');
+  fs.mkdirSync(generatedDir, { recursive: true });
+
+  // loadAllRules should return only project rules, never baseline defaults
+  const rules = loadAllRules({
+    builtinRules: { dir: generatedDir },
+    customRules: { dir: path.join(cwd, 'text-govern-rules', 'custom') },
+    rules: { includeDefaults: true }, // even when true, loadAllRules should not include defaults
+  });
+  // Empty generated dir → empty project rules
+  assert.deepStrictEqual(rules.banned, [], 'loadAllRules should not include baseline defaults (use loadBaselineRules for that)');
+}
+
+async function testAnalyzeFindings_HaveSourceField() {
+  const cwd = tempProject();
+  const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
+  fs.mkdirSync(rulesDir, { recursive: true });
+  const customDir = path.join(cwd, 'text-govern-rules', 'custom');
+  fs.mkdirSync(customDir, { recursive: true });
+
+  // Write a minimal project rule
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      ['词', '替换建议', '风险等级', '分类', '法规来源', '备注'],
+      ['免费送', '限时优惠', '高风险', '广告法极限词', '广告法', ''],
+    ]),
+    '违禁违规词'
+  );
+  XLSX.writeFile(wb, path.join(rulesDir, 'banned.xlsx'));
+
+  // Write a minimal extracted.json
+  const extractedDir = path.join(cwd, '.text-govern');
+  fs.mkdirSync(extractedDir, { recursive: true });
+  const fragments = [
+    {
+      id: 'frag_001',
+      file: 'pages/index/index.wxml',
+      line: 1,
+      column: 0,
+      raw: '立即领取免费送好礼',
+      normalized: '立即领取免费送好礼',
+      kind: 'wxml-text',
+      pageHint: 'pages/index',
+      surrounding: '',
+    },
+  ];
+  fs.writeFileSync(
+    path.join(extractedDir, 'extracted.json'),
+    JSON.stringify({ fragments }),
+    'utf8'
+  );
+
+  const { run: analyzeRun } = require('../lib/commands/analyze');
+  const result = await analyzeRun({
+    cwd,
+    input: path.join(extractedDir, 'extracted.json'),
+    out: path.join(extractedDir, 'findings.rule.json'),
+    // Disable baseline so we only see project rule findings in this test
+    noBaseline: true,
+  });
+
+  assert.ok(result.findings.length > 0, '应当命中项目规则中的"免费送"');
+  for (const f of result.findings) {
+    assert.ok(f.source === 'project' || f.source === 'baseline', `finding.source 应为 project 或 baseline, 实际: ${f.source}`);
+  }
+  assert.ok(result.stats.bySource, 'stats 应当包含 bySource 字段');
+  assert.ok('baseline' in result.stats.bySource, 'bySource 应包含 baseline 键');
+  assert.ok('project' in result.stats.bySource, 'bySource 应包含 project 键');
+}
+
+async function testAnalyzeNoBaselineFlag_SkipsBaselineScan() {
+  const cwd = tempProject();
+  const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
+  const customDir = path.join(cwd, 'text-govern-rules', 'custom');
+  fs.mkdirSync(rulesDir, { recursive: true });
+  fs.mkdirSync(customDir, { recursive: true });
+
+  const extractedDir = path.join(cwd, '.text-govern');
+  fs.mkdirSync(extractedDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(extractedDir, 'extracted.json'),
+    JSON.stringify({ fragments: [] }),
+    'utf8'
+  );
+
+  const { run: analyzeRun } = require('../lib/commands/analyze');
+
+  // With includeDefaults=true but noBaseline=true, baseline should be skipped
+  const result = await analyzeRun({
+    cwd,
+    input: path.join(extractedDir, 'extracted.json'),
+    out: path.join(extractedDir, 'findings.rule.json'),
+    noBaseline: true,
+  });
+
+  assert.strictEqual(result.stats.bySource.baseline, 0, '--no-baseline 时 bySource.baseline 应为 0');
+  assert.strictEqual(result.findings.filter((f) => f.source === 'baseline').length, 0, '--no-baseline 时不应有 baseline findings');
+}
+
+async function testAnalyzeStats_ContainsBySource() {
+  const cwd = tempProject();
+  const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
+  const customDir = path.join(cwd, 'text-govern-rules', 'custom');
+  fs.mkdirSync(rulesDir, { recursive: true });
+  fs.mkdirSync(customDir, { recursive: true });
+
+  const extractedDir = path.join(cwd, '.text-govern');
+  fs.mkdirSync(extractedDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(extractedDir, 'extracted.json'),
+    JSON.stringify({ fragments: [] }),
+    'utf8'
+  );
+
+  const { run: analyzeRun } = require('../lib/commands/analyze');
+  const result = await analyzeRun({
+    cwd,
+    input: path.join(extractedDir, 'extracted.json'),
+    out: path.join(extractedDir, 'findings.rule.json'),
+    noBaseline: true,
+  });
+
+  assert.ok(result.stats.bySource !== undefined, 'stats.bySource should always be present');
+  assert.ok(typeof result.stats.bySource.baseline === 'number', 'bySource.baseline should be a number');
+  assert.ok(typeof result.stats.bySource.project === 'number', 'bySource.project should be a number');
+}
+
+function testFetchBaselineScriptExists() {
+  const scriptPath = path.join(__dirname, '..', 'scripts', 'fetch-public-baseline.js');
+  assert.ok(fs.existsSync(scriptPath), 'scripts/fetch-public-baseline.js should exist');
+  // Verify key constants are defined
+  const src = fs.readFileSync(scriptPath, 'utf8');
+  assert.ok(src.includes('KONSHENG_SHA'), 'fetch script should pin konsheng SHA');
+  assert.ok(src.includes('FWWDN_SHA'), 'fetch script should pin fwwdn SHA');
+  assert.ok(src.includes('banned.default.xlsx'), 'fetch script should reference output xlsx');
+  assert.ok(src.includes('THIRD_PARTY_NOTICES.md'), 'fetch script should write THIRD_PARTY_NOTICES.md');
+}
+
+function testPackageJsonHasFetchBaselineScript() {
+  const pkg = require('../package.json');
+  assert.ok(
+    pkg.scripts && pkg.scripts['fetch:baseline'],
+    'package.json should define scripts["fetch:baseline"]'
+  );
+  assert.ok(
+    pkg.scripts['build:defaults'] && pkg.scripts['build:defaults'].includes('fetch-public-baseline'),
+    'build:defaults should invoke fetch-public-baseline.js'
+  );
+  assert.ok(
+    pkg.scripts['prepublishOnly'] && pkg.scripts['prepublishOnly'].includes('fetch-public-baseline'),
+    'prepublishOnly should invoke fetch-public-baseline.js to ensure baseline is fresh before publish'
+  );
+}
+
 async function run() {
   const tests = [
     testInitCreatesReusableEmptyExcelTemplates,
@@ -210,6 +393,15 @@ async function run() {
     testInstallerCopiesAssetsToClaude,
     testInstallerIsIdempotent,
     testInstallerDryRunWritesNothing,
+    // Baseline channel tests
+    testLoadBaselineRulesReturnsEmptyWhenIncludeDefaultsFalse,
+    testLoadBaselineRulesReturnsDataWhenIncludeDefaultsTrue,
+    testLoadAllRulesDoesNotIncludeBaselineWhenExcluded,
+    testAnalyzeFindings_HaveSourceField,
+    testAnalyzeNoBaselineFlag_SkipsBaselineScan,
+    testAnalyzeStats_ContainsBySource,
+    testFetchBaselineScriptExists,
+    testPackageJsonHasFetchBaselineScript,
   ];
 
   for (const test of tests) {

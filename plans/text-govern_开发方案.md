@@ -179,13 +179,13 @@ scripts/text-govern/
 
 `bin/text-govern.js`（commander）：
 
-| 命令 | 作用 | 退出码 |
-|------|------|--------|
-| `text-govern init` | 创建 `text-govern.config.js`、`text-govern-rules/{custom,generated}/`、空 Excel 模板与 README.md | 0 |
-| `text-govern scan` | 扫描 → `.text-govern/extracted.json` | 0 |
-| `text-govern analyze` | 规则匹配 → `.text-govern/findings.rule.json` | 0 |
-| `text-govern report` | 合并 rule + ai → `.text-govern/report.html` | 按 `severity.failOn` 决定 |
-| `text-govern template [--md]` | 仅重新生成业务自定义模板（默认 Excel；`--md` 切换 Markdown） | 0 |
+| 命令                          | 作用                                                                                             | 退出码                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------- |
+| `text-govern init`            | 创建 `text-govern.config.js`、`text-govern-rules/{custom,generated}/`、空 Excel 模板与 README.md | 0                         |
+| `text-govern scan`            | 扫描 → `.text-govern/extracted.json`                                                             | 0                         |
+| `text-govern analyze`         | 规则匹配 → `.text-govern/findings.rule.json`                                                     | 0                         |
+| `text-govern report`          | 合并 rule + ai → `.text-govern/report.html`                                                      | 按 `severity.failOn` 决定 |
+| `text-govern template [--md]` | 仅重新生成业务自定义模板（默认 Excel；`--md` 切换 Markdown）                                     | 0                         |
 
 注册到业务项目根 `package.json`：
 
@@ -196,8 +196,8 @@ scripts/text-govern/
     "text-govern:init": "node ./scripts/text-govern/bin/text-govern.js init",
     "text-govern:scan": "node ./scripts/text-govern/bin/text-govern.js scan",
     "text-govern:analyze": "node ./scripts/text-govern/bin/text-govern.js analyze",
-    "text-govern:report": "node ./scripts/text-govern/bin/text-govern.js report"
-  }
+    "text-govern:report": "node ./scripts/text-govern/bin/text-govern.js report",
+  },
 }
 ```
 
@@ -215,17 +215,23 @@ module.exports = {
    * - 任意中文描述：例如 '医药系统中的代理商专用商贷宝系统'
    * 不再使用 medical/finance/ecommerce 等固定枚举。
    */
-  industry: '医药系统中的代理商专用商贷宝系统',
+  industry: "医药系统中的代理商专用商贷宝系统",
 
   scan: {
-    include: ['pages/**', 'packageA/**', 'packageB/**', 'packageC/**', 'components/**', 'app.json'],
-    exclude: ['node_modules/**', 'miniprogram_npm/**', '.text-govern/**', '**/scripts/text-govern/**', '**/*.test.js'],
-    adapters: ['wxml', 'js', 'json'],
+    include: ["pages/**", "packageA/**", "packageB/**", "packageC/**", "components/**", "app.json"],
+    exclude: [
+      "node_modules/**",
+      "miniprogram_npm/**",
+      ".text-govern/**",
+      "**/scripts/text-govern/**",
+      "**/*.test.js",
+    ],
+    adapters: ["wxml", "js", "json"],
   },
 
   // 业务项目本地规则（推荐入 git）
-  customRules: { dir: './text-govern-rules/custom' },
-  builtinRules: { dir: './text-govern-rules/generated' },
+  customRules: { dir: "./text-govern-rules/custom" },
+  builtinRules: { dir: "./text-govern-rules/generated" },
 
   rules: {
     // 是否启用 CLI 包内 scripts/text-govern/config/*.default.xlsx 中的内置规则
@@ -233,19 +239,19 @@ module.exports = {
     includeDefaults: false,
   },
 
-  output: { dir: './.text-govern' },
+  output: { dir: "./.text-govern" },
 
   exclusions: {
     minChineseChars: 2,
-    patterns: ['^https?://', '^\\.\\.', '^[A-Za-z0-9_\\-\\.]+$', '^#[0-9a-fA-F]{3,6}$'],
+    patterns: ["^https?://", "^\\.\\.", "^[A-Za-z0-9_\\-\\.]+$", "^#[0-9a-fA-F]{3,6}$"],
   },
 
   severity: {
     // 中文阈值；高于该等级的命中会让 CLI 以非零码退出（CI 阻断）
     // 严重违禁 | 高风险 | 需关注 | 推荐修改 | none
-    failOn: '严重违禁',
+    failOn: "严重违禁",
   },
-};
+}
 ```
 
 ---
@@ -280,11 +286,11 @@ module.exports = {
 
 ## 七、规则分析器
 
-| 分析器 | 算法 | 默认严重等级映射 |
-|--------|------|---------------|
-| `banned.js` | Aho-Corasick 多模式扫描（万级词库 O(n)） | 取 Excel 中的 `severity`，缺省 `需关注` |
-| `terminology.js` | 别名 → 标准词聚合，同系统多别名预警 | 取 Excel 中 `severity`，缺省 `需关注` |
-| `semantic.js` | 页面 glob + 禁用词上下文匹配 | 取 Excel 中 `severity`，缺省 `需关注`，AI 补充歧义类 |
+| 分析器           | 算法                                     | 默认严重等级映射                                     |
+| ---------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `banned.js`      | Aho-Corasick 多模式扫描（万级词库 O(n)） | 取 Excel 中的 `severity`，缺省 `需关注`              |
+| `terminology.js` | 别名 → 标准词聚合，同系统多别名预警      | 取 Excel 中 `severity`，缺省 `需关注`                |
+| `semantic.js`    | 页面 glob + 禁用词上下文匹配             | 取 Excel 中 `severity`，缺省 `需关注`，AI 补充歧义类 |
 
 `lib/severity.js`：
 
@@ -299,9 +305,9 @@ module.exports = {
 
 文件：
 
-- `scripts/text-govern/config/banned.default.xlsx`（约 84 条）
-- `scripts/text-govern/config/terminology.default.xlsx`（约 14 条）
-- `scripts/text-govern/config/semantic.default.xlsx`（默认空）
+- `scripts/text-govern/config/banned.default.xlsx`
+- `scripts/text-govern/config/terminology.default.xlsx`
+- `scripts/text-govern/config/semantic.default.xlsx`
 - `scripts/text-govern/config/README.md`
 
 维护方式：
@@ -345,24 +351,24 @@ text-govern (npm 包)
 2. 按 `--scope project|global` 决定目标根目录
 3. 铺设 Skill 目录（所有编辑器）+ Slash 命令文件（Cursor/Claude）
 
-| 编辑器 | Skill 目标 | Slash 命令目标 |
-|--------|-----------|---------------|
-| Cursor | `.cursor/skills/text-govern/` | `.cursor/commands/text-govern*.md` |
+| 编辑器      | Skill 目标                    | Slash 命令目标                     |
+| ----------- | ----------------------------- | ---------------------------------- |
+| Cursor      | `.cursor/skills/text-govern/` | `.cursor/commands/text-govern*.md` |
 | Claude Code | `.claude/skills/text-govern/` | `.claude/commands/text-govern*.md` |
-| Codex | `.codex/skills/text-govern/` | 不铺（已弃用 custom prompts） |
+| Codex       | `.codex/skills/text-govern/`  | 不铺（已弃用 custom prompts）      |
 
 选项：`--editor cursor,claude,codex`、`--force`、`--dry-run`
 
 ### Slash 命令 → Skill 路由
 
-| 命令 | 执行分支 |
-|------|---------|
-| `/text-govern` | 全流程 5 步 |
-| `/text-govern-init` | CLI init |
-| `/text-govern-rules` | Init 场景步骤 A~E（AI 生成 Excel 规则库） |
-| `/text-govern-scan` | CLI scan |
-| `/text-govern-analyze` | CLI analyze |
-| `/text-govern-report` | AI 语义 + CLI report |
+| 命令                   | 执行分支                                  |
+| ---------------------- | ----------------------------------------- |
+| `/text-govern`         | 全流程 5 步                               |
+| `/text-govern-init`    | CLI init                                  |
+| `/text-govern-rules`   | Init 场景步骤 A~E（AI 生成 Excel 规则库） |
+| `/text-govern-scan`    | CLI scan                                  |
+| `/text-govern-analyze` | CLI analyze                               |
+| `/text-govern-report`  | AI 语义 + CLI report                      |
 
 ### 编排 A · 日常治理 5 步（`/text-govern` 或直接对话）
 
@@ -448,19 +454,19 @@ Agent 严格按 `prompts/generate-rules.md` 执行，**角色 = 合规审核 + �
 
 ## 十三、各版本主要差异对照
 
-| 维度 | v1 初始方案 | v2（规则 Excel 化） | v3（三层多编辑器） |
-|------|----------|----------|----------|
-| 风险等级 / 分类 | 英文枚举 | 中文自定义字符串 | 同 v2 |
-| 行业 industry | 固定枚举 | 留空或任意中文描述 | 同 v2 |
-| 自定义规则位置 | `scripts/text-govern/custom/` | `text-govern-rules/custom/` | 同 v2 |
-| AI 生成规则位置 | `scripts/text-govern/rules/` | `text-govern-rules/generated/` | 同 v2 |
-| 内置默认规则 | `defaults.js` 硬编码 | `config/*.default.xlsx` | 同 v2 |
-| 规则格式 | Markdown 优先 | Excel 优先，Markdown 兼容 | 同 v2 |
-| 规则生成视角 | 合规 + 行业 | 6 维度（含 UX/品牌/语义） | 同 v2 |
-| 包名 / 形态 | 局部脚本（private） | `text-govern`（bin 入口） | `text-govern`（含 files/prepublishOnly） |
-| Skill | 无 | Cursor Skill | Cursor + Claude Code + Codex Skill（disable-model-invocation） |
-| Slash 命令 | 无 | 无 | 6 条（text-govern / -init / -rules / -scan / -analyze / -report） |
-| 安装器 | 无 | 无 | `text-govern install`（--editor/--scope/--force/--dry-run） |
+| 维度            | v1 初始方案                   | v2（规则 Excel 化）            | v3（三层多编辑器）                                                |
+| --------------- | ----------------------------- | ------------------------------ | ----------------------------------------------------------------- |
+| 风险等级 / 分类 | 英文枚举                      | 中文自定义字符串               | 同 v2                                                             |
+| 行业 industry   | 固定枚举                      | 留空或任意中文描述             | 同 v2                                                             |
+| 自定义规则位置  | `scripts/text-govern/custom/` | `text-govern-rules/custom/`    | 同 v2                                                             |
+| AI 生成规则位置 | `scripts/text-govern/rules/`  | `text-govern-rules/generated/` | 同 v2                                                             |
+| 内置默认规则    | `defaults.js` 硬编码          | `config/*.default.xlsx`        | 同 v2                                                             |
+| 规则格式        | Markdown 优先                 | Excel 优先，Markdown 兼容      | 同 v2                                                             |
+| 规则生成视角    | 合规 + 行业                   | 6 维度（含 UX/品牌/语义）      | 同 v2                                                             |
+| 包名 / 形态     | 局部脚本（private）           | `text-govern`（bin 入口）      | `text-govern`（含 files/prepublishOnly）                          |
+| Skill           | 无                            | Cursor Skill                   | Cursor + Claude Code + Codex Skill（disable-model-invocation）    |
+| Slash 命令      | 无                            | 无                             | 6 条（text-govern / -init / -rules / -scan / -analyze / -report） |
+| 安装器          | 无                            | 无                             | `text-govern install`（--editor/--scope/--force/--dry-run）       |
 
 ---
 

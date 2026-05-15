@@ -7,37 +7,37 @@
 
 | 文件 | Sheet | 用途 |
 |------|-------|------|
-| `banned.default.xlsx` | 违禁违规词 | 面向中国大陆 To B/To C 业务的通用违禁/合规底线 |
-| `terminology.default.xlsx` | 术语统一 | 通用 UI 文案术语统一（按钮、空状态、错误提示等） |
-| `semantic.default.xlsx` | 业务语义 | 默认留空——业务语义高度项目相关，建议由 AI/业务在 `text-govern-rules/` 中维护 |
+| `banned.default.xlsx` | 违禁违规词 | 基于公开开源词库（konsheng/Sensitive-lexicon MIT + fwwdn/sensitive-stop-words Apache-2.0），构建期拉取生成 |
+| `terminology.default.xlsx` | 术语统一 | 通用 UI 文案术语统一（按钮、空状态、错误提示等），手动维护 |
+| `semantic.default.xlsx` | 业务语义 | 默认留空——业务语义高度项目相关，建议由 AI 在 `text-govern-rules/` 中维护 |
+| `THIRD_PARTY_NOTICES.md` | — | 三方词库许可声明与锁定的 commit SHA |
 
-## 词库定位
+## 词库来源
 
-- **覆盖**：《广告法》第九条极限词、金融资管新规、医疗广告管理办法、明显不文明用语、轻量政治/封建迷信兜底
-- **不覆盖**：明确的政治领导人/民族宗教敏感词、色情/赌博/毒品大词库——这类词请在
-  业务项目的 `text-govern-rules/custom/banned.xlsx` 中按需补充，不在通用代码仓库中沉淀
-- **不覆盖**：行业强相关（医药、教育、汽车、奢侈品等）的具体合规词——请由 AI 在
-  `text-govern-rules/generated/` 生成或业务在 `text-govern-rules/custom/` 维护
+`banned.default.xlsx` 由 `scripts/fetch-public-baseline.js` 构建期拉取生成，词库涵盖：
 
-## 维护方式
+| 分类 | 风险等级 | 来源 |
+|------|----------|------|
+| 色情违规 | 严重违禁 | konsheng/Sensitive-lexicon |
+| 政治敏感 | 严重违禁 | konsheng/Sensitive-lexicon |
+| 暴恐违禁 | 严重违禁 | konsheng/Sensitive-lexicon |
+| 涉枪涉爆 | 严重违禁 | konsheng/Sensitive-lexicon |
+| 广告违规 | 高风险 | konsheng/Sensitive-lexicon + fwwdn/sensitive-stop-words |
 
-### 方式一：直接编辑 Excel（推荐）
+**有意不覆盖（请通过 AI 生成或手动 custom 维护）**：
+- 广告法极限词（第九条"最佳/第一"等）— 行业强相关，由 AI 结合项目生成
+- 金融合规（资管新规保本/保收益）— 行业强相关
+- 医疗合规（治愈/根治等）— 行业强相关
+- 教育合规、食品合规等——同上
 
-合规/业务同学可直接打开 `banned.default.xlsx` 等文件增删条目，保存即生效。
-工具运行时通过 `scripts/text-govern/lib/rules/defaults.js` 读取这些 Excel。
+## 刷新词库
 
-### 方式二：维护数据脚本
-
-若需通过代码批量维护：
+词库版本锁定于指定 commit SHA（见 `THIRD_PARTY_NOTICES.md`）。如需同步上游更新：
 
 ```bash
-# 编辑 scripts/text-govern/scripts/build-default-rules.js 中的 *_ROWS 数据
-node scripts/text-govern/scripts/build-default-rules.js
+cd scripts/text-govern
+npm run fetch:baseline   # 需要网络，重新拉取并覆盖 banned.default.xlsx
 ```
-
-## 字段约束
-
-参考 `text-govern-rules/custom/README.md`，字段含义完全一致。
 
 ## 启用方式
 
@@ -49,4 +49,4 @@ module.exports = {
 };
 ```
 
-默认情况下 `includeDefaults: false`，避免与项目无关的规则干扰。
+默认 `includeDefaults: false`，避免基线规则干扰纯项目扫描。

@@ -162,14 +162,27 @@ module.exports = {
 
 ### 内置默认规则（`rules.includeDefaults: true`）
 
-来自 CLI 包内 `config/*.default.xlsx`，涵盖：
+来自 CLI 包内 `config/banned.default.xlsx`，由构建期脚本从公开开源词库拉取生成：
 
-- 广告法极限词（84 条）
-- 金融合规（12 条）
-- 医疗合规（11 条）
-- 不文明用语 / 封建迷信（轻量兜底）
+| 分类 | 风险等级 | 词库来源 |
+|---|---|---|
+| 色情违规 | 严重违禁 | konsheng/Sensitive-lexicon (MIT) |
+| 政治敏感 | 严重违禁 | konsheng/Sensitive-lexicon (MIT) |
+| 暴恐违禁 | 严重违禁 | konsheng/Sensitive-lexicon (MIT) |
+| 涉枪涉爆 | 严重违禁 | konsheng/Sensitive-lexicon (MIT) |
+| 广告违规 | 高风险 | konsheng/Sensitive-lexicon + fwwdn/sensitive-stop-words (Apache-2.0) |
 
-编辑方式：直接打开 Excel，或修改 `scripts/build-default-rules.js` 后运行重新生成。
+commit SHA 及许可声明见 `scripts/text-govern/config/THIRD_PARTY_NOTICES.md`。
+
+**有意不覆盖**（请通过 `/text-govern-rules` 让 AI 按项目生成）：广告法极限词（第九条绝对化用语）、金融合规（资管新规）、医疗合规、教育合规等行业强相关词汇。
+
+**如何刷新基线**（需要网络连接）：
+
+```bash
+cd scripts/text-govern
+npm run fetch:baseline   # 从上游重新拉取，覆盖 config/banned.default.xlsx
+npm run build:defaults   # 等同于 fetch:baseline + 重写 terminology/semantic xlsx
+```
 
 ### AI 生成规则（推荐主力）
 

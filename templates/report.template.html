@@ -225,6 +225,10 @@ const CAT_LABEL = {违规治理:'违规治理',行业合规:'行业合规',词�
 const CAT_COLORS = {违规治理:'#e53e3e',行业合规:'#dd6b20',词义统一类:'#0f3460',业务语义统一类:'#7c3aed',推荐修改类:'#38a169',banned:'#e53e3e',industry:'#dd6b20',terminology:'#0f3460',semantic:'#7c3aed',recommend:'#38a169'};
 const PAGE_SIZE = 50;
 
+/** analyze 写入 project/baseline；分析器层可能为 rule；AI 为 ai */
+function isRuleSource(src){return src==='rule'||src==='project'||src==='baseline';}
+function isAiSource(src){return src==='ai';}
+
 let allFindings = [];
 let filtered = [];
 let currentPage = 1;
@@ -367,7 +371,11 @@ function applyFilters(){
   filtered=allFindings.filter(f=>{
     if(!activeFilters.severity.has(f.severity))return false;
     if(!activeFilters.category.has(f.category))return false;
-    if(!activeFilters.source.has(f.source))return false;
+    const ruleOn=activeFilters.source.has('rule');
+    const aiOn=activeFilters.source.has('ai');
+    if(isRuleSource(f.source)&&!ruleOn)return false;
+    if(isAiSource(f.source)&&!aiOn)return false;
+    if(!isRuleSource(f.source)&&!isAiSource(f.source)&&!ruleOn&&!aiOn)return false;
     if(activeCatFilter&&f.category!==activeCatFilter)return false;
     if(searchQuery){
       const haystack=(f.file+f.matched+f.reason+f.rawText+f.suggestion).toLowerCase();
@@ -387,10 +395,13 @@ function applyFilters(){
 
   // Update counts
   const bySev={};const byCat={};const bySrc={};
-  filtered.forEach(f=>{bySev[f.severity]=(bySev[f.severity]||0)+1;byCat[f.category]=(byCat[f.category]||0)+1;bySrc[f.source]=(bySrc[f.source]||0)+1;});
+  filtered.forEach(f=>{bySev[f.severity]=(bySev[f.severity]||0)+1;byCat[f.category]=(byCat[f.category]||0)+1;});
+  const srcRule=filtered.filter(f=>isRuleSource(f.source)).length;
+  const srcAi=filtered.filter(f=>isAiSource(f.source)).length;
   [...activeFilters.severity].forEach(s=>{const el=document.getElementById('fc-sev-'+slug(s));if(el)el.textContent=bySev[s]||0;});
   [...new Set(allFindings.map(f=>f.category))].forEach(c=>{const el=document.getElementById('fc-cat-'+slug(c));if(el)el.textContent=byCat[c]||0;});
-  ['rule','ai'].forEach(s=>{const el=document.getElementById('fc-src-'+s);if(el)el.textContent=bySrc[s]||0;});
+  const elRule=document.getElementById('fc-src-rule');if(elRule)elRule.textContent=srcRule;
+  const elAi=document.getElementById('fc-src-ai');if(elAi)elAi.textContent=srcAi;
 
   document.getElementById('resultCount').textContent=`显示 ${filtered.length} / ${allFindings.length} 条`;
   renderTable();
@@ -414,7 +425,7 @@ function renderTable(){
       <td><span class="file-path">${escHtml(f.file)}<span class="loc">:${f.line}</span></span></td>
       <td><span class="matched-word">${escHtml(f.matched||'')}</span></td>
       <td><span class="suggestion">${escHtml(f.suggestion||'—')}</span></td>
-      <td><span class="badge-src ${f.source==='ai'?'ai':''}">${f.source==='ai'?'AI':'规则'}</span></td>
+      <td><span class="badge-src ${isAiSource(f.source)?'ai':''}">${isAiSource(f.source)?'AI':'规则'}</span></td>
       <td><button class="expand-btn" onclick="event.stopPropagation();toggleExpand('${f.id}',${idx})">${expanded?'▲':'▼'}</button></td>
     </tr>`];
     if(expanded){

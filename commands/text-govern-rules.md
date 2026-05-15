@@ -51,3 +51,4 @@ description: "用 text-govern 按 6 维度（合规底线/品牌调性/术语统
 - 生成词汇统计、词频统计等与规则匹配无关的内容
 - 使用英文风险等级（critical/high/medium/low）或英文分类
 - 凭空生成与本项目源码无关的规则
+- **重复公开基线词库的通用违禁词**（色情/政治/暴恐/广告/涉枪涉爆）：CLI 已通过 `rules.includeDefaults` 自动加载 konsheng/Sensitive-lexicon，项目规则只补充行业/业务专有内容
