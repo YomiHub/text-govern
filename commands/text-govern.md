@@ -1,5 +1,5 @@
 ---
-description: "text-govern 全流程文案治理：扫描源码 → 规则匹配 → AI 语义深度分析 → 生成 HTML 整改报告。当用户说「跑一下文案治理」「做一次文案合规检查」「生成整改报告」时使用。"
+description: "text-govern 全流程：扫描源码 → 规则匹配 → AI 语义深度分析 → 生成 HTML 整改报告。当用户说「跑一下text-govern」「做一次文案合规检查」「生成整改报告」时使用。"
 ---
 
 # /text-govern — 全流程文案治理

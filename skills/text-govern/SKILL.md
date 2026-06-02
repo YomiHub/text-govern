@@ -1,6 +1,6 @@
 ---
 name: text-govern
-description: "在项目里跑一轮文案合规治理，扫描全量源码，检测违禁词/行业违规/术语不统一/语义歧义，生成 HTML 整改报告。当用户说「跑一下文案治理」「做一次文案合规检查」「生成整改报告」「初始化规则库」「生成行业规则包」「更新规则库」时使用本 skill。"
+description: "在项目里跑一轮文案合规治理，扫描全量源码，检测违禁词/行业违规/术语不统一/语义歧义，生成 HTML 整改报告。当用户说「跑一下text-govern」「做一次文案合规检查」「生成整改报告」「初始化规则库」「生成行业规则包」「更新规则库」时使用本 skill。"
 disable-model-invocation: true
 ---
 
@@ -159,7 +159,7 @@ TG_CMD analyze
 
 1. 汇报每个 Excel 的条数、维度覆盖、典型样例（每类 1~2 条）
 2. 明确告知哪些维度没有输出规则、为什么
-3. 提示：`git add text-govern-rules/ && git commit -m "feat: 初始化文案治理规则库"`
+3. 提示：`git add text-govern-rules/ && git commit -m "feat: 初始化规则库"`
 4. 提醒：业务同学可直接编辑 Excel，下一次 `TG_CMD analyze` 即生效
 
 ---

@@ -237,7 +237,7 @@ Apache 2.0 License 全文见：<https://github.com/fwwdn/sensitive-stop-words/bl
   - GFW 翻墙工具词汇
   - 大规模无分类聚合词库（如腾讯、网易词库，体量过大且噪音过高）
   - COVID-19 专项词库（时效性过强）
-  - 贪腐、民生词库（与文案治理无关）
+  - 贪腐、民生词库（与text govern无关）
 - 广告法极限词、金融合规（资管新规）、医疗合规等**行业强相关合规词**不在此基线中，
   请通过 \`/text-govern-rules\` 命令让 AI 根据项目类型生成到 \`text-govern-rules/generated/\` 目录。
 `;

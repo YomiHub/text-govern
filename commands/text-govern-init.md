@@ -1,5 +1,5 @@
 ---
-description: "初始化 text-govern：创建 text-govern.config.js、text-govern-rules/ 目录和空 Excel 模板。当用户说「初始化文案治理」「第一次使用 text-govern」「初始化 text-govern 配置」时使用。"
+description: "初始化 text-govern：创建 text-govern.config.js、text-govern-rules/ 目录和空 Excel 模板。当用户说「初始化text-govern」「第一次使用 text-govern」「初始化 text-govern 配置」时使用。"
 ---
 
 # /text-govern-init — 初始化配置与模板

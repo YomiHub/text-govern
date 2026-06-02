@@ -7,7 +7,7 @@ const pkg = require('../package.json');
 
 program
   .name('text-govern')
-  .description('自动化文案治理 CLI')
+  .description('Text Govern CLI')
   .version(pkg.version);
 
 program

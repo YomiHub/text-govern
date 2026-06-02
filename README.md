@@ -250,7 +250,7 @@ text-govern init           # 或 /text-govern-init；无全局命令时：npx -y
 
 # 4. 确认规则后提交
 git add text-govern-rules/
-git commit -m "feat: 初始化文案治理规则库"
+git commit -m "feat: 初始化规则库"
 
 # 5. 日常检查（在 IDE 里或 CI）
 /text-govern               # 完整流程
