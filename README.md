@@ -65,7 +65,7 @@ node scripts/text-govern/bin/text-govern.js report
 | ---------------------- | ---------------------------------------------------------------------- | ----------- |
 | `/text-govern`         | 已init和生成rules后走全流程：扫描 → 规则匹配 → AI 语义分析 → HTML 报告 | 是          |
 | `/text-govern-init`    | 初始化配置与模板                                                       | 否          |
-| `/text-govern-rules`   | AI 按 6 维度生成 Excel 规则库                                          | 是          |
+| `/text-govern-rules`   | AI 按 6 维度生成 Excel 规则库（会前置检查执行scan）                       | 是          |
 | `/text-govern-scan`    | 扫描源码，提取中文文案片段                                             | 否          |
 | `/text-govern-analyze` | 规则匹配分析，输出 findings.rule.json                                  | 否          |
 | `/text-govern-report`  | AI 语义分析 + 生成 HTML 报告                                           | 是          |
@@ -80,7 +80,7 @@ Codex 已弃用 custom prompts，统一通过加载 Skill 触发（输入「用 
 text-govern init        # 初始化配置
 text-govern scan        # 扫描源码 → .text-govern/extracted.json
 text-govern analyze     # 规则匹配 → .text-govern/findings.rule.json
-text-govern report      # 合并 rule+ai → .text-govern/report.html
+text-govern report      # 合并 rule+ai → .text-govern/report/index.html
 text-govern template    # 重新生成空 Excel 模板
 text-govern install     # 铺设 Skill + Slash 命令到 IDE
 ```
@@ -174,7 +174,7 @@ module.exports = {
 
 commit SHA 及许可声明见 `scripts/text-govern/config/THIRD_PARTY_NOTICES.md`。
 
-**有意不覆盖**（请通过 `/text-govern-rules` 让 AI 按项目生成）：广告法极限词（第九条绝对化用语）、金融合规（资管新规）、医疗合规、教育合规等行业强相关词汇。
+**有意不覆盖**（请通过 `/text-govern-rules` 让 AI 按项目行业自主判定生成）：行业专有合规词（如绝对化用语、功效宣称、保本承诺等，适用范围因行业而异）、金融合规、医疗合规、教育合规等行业强相关词汇。
 
 **如何刷新基线**（需要网络连接）：
 
@@ -188,7 +188,7 @@ npm run build:defaults   # 等同于 fetch:baseline + 重写 terminology/semanti
 
 在 IDE 中执行 `/text-govern-rules`，AI 按 6 维度生成到 `text-govern-rules/generated/`：
 
-1. 合规底线（违禁/极限词/行业合规/政治宗教民族）
+1. 合规底线（违禁/行业合规/政治宗教民族；AI 按系统类型自主判定适用法规）
 2. 品牌与调性（客户称谓、产品名一致、B 端/C 端口吻分寸）
 3. 术语统一（同义异写、动作动词、字段名）
 4. 页面级业务语义（同字段在不同页面的语义歧义）
@@ -232,7 +232,7 @@ Sheet 名：`业务语义`
 | `.text-govern/extracted.json`     | 文案提取结果                             |
 | `.text-govern/findings.rule.json` | 规则匹配结果                             |
 | `.text-govern/findings.ai.json`   | AI 语义分析结果                          |
-| `.text-govern/report.html`        | 自包含 HTML 整改报告（可直接浏览器打开） |
+| `.text-govern/report/index.html`        | HTML 整改报告（入口为 index.html） |
 
 ## 推荐工作流
 
@@ -252,7 +252,7 @@ text-govern init           # 或 /text-govern-init；无全局命令时：npx -y
 git add text-govern-rules/
 git commit -m "feat: 初始化规则库"
 
-# 5. 日常检查（在 IDE 里或 CI）
+# 5. 日常检查（已经生成rules之后，在 IDE 里或 CI）
 /text-govern               # 完整流程
 # 或
 text-govern scan && text-govern analyze && text-govern report   # 无全局时前缀同上

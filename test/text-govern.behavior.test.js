@@ -8,7 +8,8 @@ const XLSX = require('xlsx');
 
 const { run: init } = require('../lib/commands/init');
 const { loadAllRules, loadBaselineRules } = require('../lib/rules/loader');
-const { buildStats, normalizeSeverity } = require('../lib/severity');
+const { buildStats, normalizeSeverity, normalizeCategory } = require('../lib/severity');
+const { generateHtmlReport } = require('../lib/reporters/html');
 
 function tempProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'text-govern-'));
@@ -55,14 +56,188 @@ function testChineseSeverityAndCategoryArePreserved() {
   assert.strictEqual(normalizeSeverity('高风险'), '高风险');
 
   const stats = buildStats([
-    { severity: '严重违禁', category: '广告法极限词' },
-    { severity: '推荐修改', category: '推荐修改类' },
+    { severity: '严重违禁', category: '医疗合规' },
+    { severity: '推荐修改', category: '优化类' },
   ]);
 
   assert.strictEqual(stats.bySeverity['严重违禁'], 1);
   assert.strictEqual(stats.bySeverity['推荐修改'], 1);
-  assert.strictEqual(stats.byCategory['广告法极限词'], 1);
-  assert.strictEqual(stats.byCategory['推荐修改类'], 1);
+  assert.strictEqual(stats.byCategory['医疗合规'], 1);
+  assert.strictEqual(stats.byCategory['优化类'], 1);
+}
+
+function testNormalizeCategoryMapsLegacyValues() {
+  assert.strictEqual(normalizeCategory('推荐修改类'), '优化类', '推荐修改类 should map to 优化类');
+  assert.strictEqual(normalizeCategory('其他类'), '优化类', '其他类 should map to 优化类');
+  assert.strictEqual(normalizeCategory('词义统一类'), '词义统一类', '枚举内的标准值应原样保留');
+  assert.strictEqual(normalizeCategory('业务语义统一类'), '业务语义统一类', '枚举内的标准值应原样保留');
+  assert.strictEqual(normalizeCategory('医疗合规'), '医疗合规', '规则表行业合规子类自定义值应原样保留');
+  assert.strictEqual(normalizeCategory(''), '未分类', '空字符串应归为未分类');
+  assert.strictEqual(normalizeCategory(null), '未分类', 'null 应归为未分类');
+  assert.strictEqual(normalizeCategory(undefined), '未分类', 'undefined 应归为未分类');
+}
+
+function readGlobalDataScript(filePath, globalName) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const prefix = `${globalName} = `;
+  assert.ok(content.startsWith(prefix), `${path.basename(filePath)} should assign ${globalName}`);
+  return JSON.parse(content.slice(prefix.length).replace(/;\s*$/, ''));
+}
+
+function testVueReportDirectoryIsGeneratedWithDataFiles() {
+  const cwd = tempProject();
+  const outputDir = path.join(cwd, '.text-govern', 'report');
+  const ruleFindings = [
+    {
+      file: 'pages/index/index.wxml',
+      line: 8,
+      column: 2,
+      severity: '高风险',
+      category: '行业合规',
+      matched: '免费送',
+      suggestion: '限时优惠',
+      reason: '含营销承诺文案',
+      rawText: '立即免费送',
+      surrounding: '<view>立即免费送</view>',
+      legalRef: '',
+      rulePack: 'generated',
+      pageHint: 'pages/index',
+      source: 'project',
+    },
+  ];
+  const aiFindings = [
+    {
+      file: 'pages/order/detail.wxml',
+      line: 3,
+      severity: '需关注',
+      category: '业务语义统一类',
+      matched: '业绩',
+      suggestion: '确认字段含义',
+      reason: '上下文语义不一致',
+      rawText: '累计业绩',
+      source: 'ai',
+    },
+  ];
+
+  const result = generateHtmlReport({
+    ruleFindings,
+    aiFindings,
+    scanMeta: { filesScanned: 12, totalFragments: 88 },
+    config: { industry: '医药系统', severity: { failOn: '高风险' } },
+    outputDir,
+  });
+
+  assert.strictEqual(result.outputPath, path.join(outputDir, 'index.html'));
+  assert.ok(fs.existsSync(path.join(outputDir, 'index.html')), 'report index.html should be copied');
+  assert.ok(fs.existsSync(path.join(outputDir, 'css', 'report.css')), 'report css should be copied');
+  assert.ok(fs.existsSync(path.join(outputDir, 'data', 'config.js')), 'config data should be generated');
+  assert.ok(fs.existsSync(path.join(outputDir, 'data', 'tableData.js')), 'table data should be generated');
+
+  const indexHtml = fs.readFileSync(path.join(outputDir, 'index.html'), 'utf8');
+  assert.ok(!indexHtml.includes('__DATA__'), 'Vue template should not contain old inline data placeholder');
+  assert.ok(indexHtml.includes('https://unpkg.com/vue@3/dist/vue.global.prod.js'), 'report should use Vue CDN');
+  assert.ok(indexHtml.includes('./data/config.js'), 'report should load config data file');
+  assert.ok(indexHtml.includes('./data/tableData.js'), 'report should load table data file');
+
+  const config = readGlobalDataScript(
+    path.join(outputDir, 'data', 'config.js'),
+    'window.__TEXT_GOVERN_REPORT_CONFIG__'
+  );
+  assert.strictEqual(config.meta.industry, '医药系统');
+  assert.strictEqual(config.meta.filesScanned, 12);
+  assert.deepStrictEqual(config.stats, buildStats([...ruleFindings, ...aiFindings]));
+
+  const rows = readGlobalDataScript(
+    path.join(outputDir, 'data', 'tableData.js'),
+    'window.__TEXT_GOVERN_TABLE_DATA__'
+  );
+  assert.strictEqual(rows.length, 2);
+  assert.strictEqual(rows[0].source, 'rule');
+  assert.strictEqual(rows[0].sourceLabel, '项目规则');
+  assert.strictEqual(rows[1].source, 'ai');
+  assert.strictEqual(rows[1].sourceLabel, 'AI 语义分析');
+  assert.ok(rows[0].id, 'table rows should have stable display ids');
+}
+
+function testVueReportDirectorySupportsEmptyFindings() {
+  const cwd = tempProject();
+  const outputDir = path.join(cwd, '.text-govern', 'report');
+
+  const result = generateHtmlReport({
+    ruleFindings: [],
+    aiFindings: [],
+    scanMeta: {},
+    config: {},
+    outputDir,
+  });
+
+  assert.strictEqual(result.totalFindings, 0);
+  assert.ok(fs.existsSync(path.join(outputDir, 'index.html')));
+  const rows = readGlobalDataScript(
+    path.join(outputDir, 'data', 'tableData.js'),
+    'window.__TEXT_GOVERN_TABLE_DATA__'
+  );
+  assert.deepStrictEqual(rows, []);
+}
+
+async function testReportCommandRejectsHtmlOutPath() {
+  const cwd = tempProject();
+  const outputDir = path.join(cwd, '.text-govern');
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(outputDir, 'findings.rule.json'),
+    JSON.stringify({ findings: [] }),
+    'utf8'
+  );
+
+  const { run: reportRun } = require('../lib/commands/report');
+  const originalExit = process.exit;
+  let exitCode;
+  process.exit = (code) => {
+    exitCode = code;
+    throw new Error('process.exit');
+  };
+
+  try {
+    await assert.rejects(
+      () => reportRun({ cwd, out: path.join(outputDir, 'report.html'), noFail: true }),
+      /process\.exit/
+    );
+    assert.strictEqual(exitCode, 1, 'HTML out path should be rejected with exit code 1');
+  } finally {
+    process.exit = originalExit;
+  }
+}
+
+async function testReportCommandWritesDefaultDirectoryReport() {
+  const cwd = tempProject();
+  const outputDir = path.join(cwd, '.text-govern');
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(outputDir, 'findings.rule.json'),
+    JSON.stringify({
+      findings: [
+        {
+          file: 'pages/index/index.wxml',
+          line: 1,
+          severity: '推荐修改',
+          category: '优化类',
+          matched: '点击',
+          suggestion: '查看',
+          source: 'project',
+        },
+      ],
+    }),
+    'utf8'
+  );
+
+  const { run: reportRun } = require('../lib/commands/report');
+  const result = await reportRun({ cwd, noFail: true });
+
+  assert.strictEqual(result.outputPath, path.join(outputDir, 'report', 'index.html'));
+  assert.ok(fs.existsSync(result.outputPath), 'report command should write .text-govern/report/index.html');
+  assert.ok(fs.existsSync(path.join(outputDir, 'report', 'data', 'config.js')));
+  assert.ok(fs.existsSync(path.join(outputDir, 'report', 'data', 'tableData.js')));
 }
 
 function testAiGeneratedRulesCanBeExcel() {
@@ -240,10 +415,8 @@ function testLoadAllRulesDoesNotIncludeBaselineWhenExcluded() {
 
 async function testAnalyzeFindings_HaveSourceField() {
   const cwd = tempProject();
+  await init({ cwd });
   const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
-  fs.mkdirSync(rulesDir, { recursive: true });
-  const customDir = path.join(cwd, 'text-govern-rules', 'custom');
-  fs.mkdirSync(customDir, { recursive: true });
 
   // Write a minimal project rule
   const wb = XLSX.utils.book_new();
@@ -251,7 +424,7 @@ async function testAnalyzeFindings_HaveSourceField() {
     wb,
     XLSX.utils.aoa_to_sheet([
       ['词', '替换建议', '风险等级', '分类', '法规来源', '备注'],
-      ['免费送', '限时优惠', '高风险', '广告法极限词', '广告法', ''],
+      ['免费送', '限时优惠', '高风险', '行业合规', '', ''],
     ]),
     '违禁违规词'
   );
@@ -299,13 +472,9 @@ async function testAnalyzeFindings_HaveSourceField() {
 
 async function testAnalyzeNoBaselineFlag_SkipsBaselineScan() {
   const cwd = tempProject();
-  const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
-  const customDir = path.join(cwd, 'text-govern-rules', 'custom');
-  fs.mkdirSync(rulesDir, { recursive: true });
-  fs.mkdirSync(customDir, { recursive: true });
+  await init({ cwd });
 
   const extractedDir = path.join(cwd, '.text-govern');
-  fs.mkdirSync(extractedDir, { recursive: true });
   fs.writeFileSync(
     path.join(extractedDir, 'extracted.json'),
     JSON.stringify({ fragments: [] }),
@@ -328,13 +497,9 @@ async function testAnalyzeNoBaselineFlag_SkipsBaselineScan() {
 
 async function testAnalyzeStats_ContainsBySource() {
   const cwd = tempProject();
-  const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
-  const customDir = path.join(cwd, 'text-govern-rules', 'custom');
-  fs.mkdirSync(rulesDir, { recursive: true });
-  fs.mkdirSync(customDir, { recursive: true });
+  await init({ cwd });
 
   const extractedDir = path.join(cwd, '.text-govern');
-  fs.mkdirSync(extractedDir, { recursive: true });
   fs.writeFileSync(
     path.join(extractedDir, 'extracted.json'),
     JSON.stringify({ fragments: [] }),
@@ -386,6 +551,11 @@ async function run() {
     testInitCreatesReusableEmptyExcelTemplates,
     testPackageIsReusableCliPackage,
     testChineseSeverityAndCategoryArePreserved,
+    testNormalizeCategoryMapsLegacyValues,
+    testVueReportDirectoryIsGeneratedWithDataFiles,
+    testVueReportDirectorySupportsEmptyFindings,
+    testReportCommandRejectsHtmlOutPath,
+    testReportCommandWritesDefaultDirectoryReport,
     testAiGeneratedRulesCanBeExcel,
     testDefaultsAreLoadedFromExcelConfig,
     testInitGeneratesMarkdownReadmeForCustomDir,

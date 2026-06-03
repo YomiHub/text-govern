@@ -48,5 +48,5 @@ Apache 2.0 License 全文见：<https://github.com/fwwdn/sensitive-stop-words/bl
   - 大规模无分类聚合词库（如腾讯、网易词库，体量过大且噪音过高）
   - COVID-19 专项词库（时效性过强）
   - 贪腐、民生词库（与text govern无关）
-- 广告法极限词、金融合规（资管新规）、医疗合规等**行业强相关合规词**不在此基线中，
-  请通过 `/text-govern-rules` 命令让 AI 根据项目类型生成到 `text-govern-rules/generated/` 目录。
+- 行业专有合规词（如绝对化用语、功效宣称、保本承诺等）、金融合规、医疗合规等**行业强相关合规词**不在此基线中，
+  请通过 `/text-govern-rules` 命令让 AI 根据系统落地形态与行业，自主判定适用法规后生成到 `text-govern-rules/generated/` 目录。

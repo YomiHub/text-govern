@@ -44,7 +44,7 @@ TG_CMD report
 
 ## 步骤 3 — 汇报
 
-1. 报告路径：`.text-govern/report.html`（可直接用浏览器打开）
+1. 报告路径：`.text-govern/report/index.html`（可直接用浏览器打开）
 2. 按中文风险等级汇总问题数
 3. 列出 TOP 5 最严重问题（附文件 + 行号）
 4. 如有 `严重违禁` 问题，明确提示必须修复才能发布

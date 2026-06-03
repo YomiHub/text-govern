@@ -45,12 +45,12 @@ program
 
 program
   .command('report')
-  .description('合并 rule + ai findings，生成自包含 HTML 整改报告')
+  .description('合并 rule + ai findings，生成 HTML 整改报告')
   .option('--cwd <dir>', '工作目录', process.cwd())
   .option('--config <file>', '配置文件路径')
   .option('--rule-findings <file>', 'findings.rule.json 路径')
   .option('--ai-findings <file>', 'findings.ai.json 路径（可选）')
-  .option('--out <file>', '输出 HTML 路径')
+  .option('--out <dir>', '输出报告目录')
   .option('--no-fail', '即使存在阻断等级问题也以 0 退出')
   .action(async (opts) => {
     const { run } = require('../lib/commands/report');

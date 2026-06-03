@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>整改报告</title>
+  <link rel="stylesheet" href="./css/report.css">
+</head>
+<body>
+  <div id="app" v-cloak>
+    <header class="report-header">
+      <div>
+        <p class="eyebrow">Text Govern Audit</p>
+        <h1>{{ config.title || '整改报告' }}</h1>
+        <p class="meta-line">
+          生成时间：{{ generatedAtText }} · 行业：{{ config.meta.industry || '-' }} · 扫描文件：{{ config.meta.filesScanned || 0 }} · 文案片段：{{ config.meta.totalFragments || 0 }}
+        </p>
+      </div>
+      <div class="total-chip">
+        <span>{{ stats.total || 0 }}</span>
+        <small>处问题</small>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="stats-grid" aria-label="风险统计">
+        <button
+          v-for="severity in severityOptions"
+          :key="severity.value"
+          class="stat-card"
+          :class="['is-' + severity.className, { active: quickSeverity === severity.value }]"
+          type="button"
+          @click="toggleQuickSeverity(severity.value)"
+        >
+          <span class="stat-label">{{ severity.label }}</span>
+          <strong>{{ severityCount(severity.value) }}</strong>
+          <small>点击快速筛选</small>
+        </button>
+      </section>
+
+      <section class="insight-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>风险等级分布</h2>
+            <span>{{ stats.total || 0 }} total</span>
+          </div>
+          <div class="bar-list">
+            <div v-for="severity in severityOptions" :key="severity.value" class="bar-row">
+              <span>{{ severity.label }}</span>
+              <div class="bar-track">
+                <i :class="'bar-' + severity.className" :style="{ width: percent(severityCount(severity.value)) + '%' }"></i>
+              </div>
+              <b>{{ severityCount(severity.value) }}</b>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>问题类型分布</h2>
+            <span>{{ categoryOptions.length }} categories</span>
+          </div>
+          <div class="category-list" v-if="categoryOptions.length">
+            <button
+              v-for="category in categoryOptions"
+              :key="category.value"
+              type="button"
+              :class="{ active: quickCategory === category.value }"
+              @click="toggleQuickCategory(category.value)"
+            >
+              <span>{{ category.label }}</span>
+              <b>{{ categoryCount(category.value) }}</b>
+            </button>
+          </div>
+          <div v-else class="quiet-empty">暂无类型数据</div>
+        </div>
+      </section>
+
+      <section class="workbench">
+        <aside class="filters" aria-label="筛选条件">
+          <label class="search-field">
+            <span>搜索</span>
+            <input v-model.trim="searchQuery" type="search" placeholder="文件 / 命中词 / 原文 / 原因 / 建议">
+          </label>
+
+          <div class="filter-block">
+            <h3>风险等级</h3>
+            <label v-for="severity in severityOptions" :key="severity.value" class="check-row">
+              <input v-model="selectedSeverities" type="checkbox" :value="severity.value">
+              <i :class="'dot dot-' + severity.className"></i>
+              <span class="check-label">{{ severity.label }}</span>
+              <b class="check-count">{{ visibleCount('severity', severity.value) }}</b>
+            </label>
+          </div>
+
+          <div class="filter-block">
+            <h3>问题类型</h3>
+            <label v-for="category in categoryOptions" :key="category.value" class="check-row">
+              <input v-model="selectedCategories" type="checkbox" :value="category.value">
+              <span class="check-label">{{ category.label }}</span>
+              <b class="check-count">{{ visibleCount('category', category.value) }}</b>
+            </label>
+          </div>
+
+          <div class="filter-block">
+            <h3>来源</h3>
+            <label v-for="source in sourceOptions" :key="source.value" class="check-row">
+              <input v-model="selectedSources" type="checkbox" :value="source.value">
+              <span class="check-label">{{ source.label }}</span>
+              <b class="check-count">{{ visibleCount('source', source.value) }}</b>
+            </label>
+          </div>
+        </aside>
+
+        <section class="table-panel">
+          <div class="table-toolbar">
+            <div>
+              <h2>整改清单</h2>
+              <p>显示 {{ filteredRows.length }} / {{ rows.length }} 条</p>
+            </div>
+            <select v-model.number="pageSize" aria-label="每页条数">
+              <option :value="10">10 / 页</option>
+              <option :value="25">25 / 页</option>
+              <option :value="50">50 / 页</option>
+              <option :value="100">100 / 页</option>
+            </select>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th v-for="column in columns" :key="column.key" @click="sortBy(column.key)">
+                    {{ column.label }}
+                    <span v-if="sortKey === column.key">{{ sortAsc ? '↑' : '↓' }}</span>
+                  </th>
+                  <th class="detail-col"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="row in pageRows" :key="row.id">
+                  <tr :class="{ expanded: expandedRows.has(row.id) }" @click="toggleExpand(row.id)">
+                    <td><span class="severity-badge" :class="'badge-' + row.severityClass">{{ row.severityLabel }}</span></td>
+                    <td><span class="category-badge">{{ row.categoryLabel }}</span></td>
+                    <td class="file-cell">{{ row.file }}<span v-if="row.line">:{{ row.line }}</span></td>
+                    <td class="matched-cell">{{ row.matched || '-' }}</td>
+                    <td class="suggestion-cell">{{ row.suggestion || '-' }}</td>
+                    <td><span class="source-badge" :class="{ ai: row.source === 'ai' }">{{ row.sourceLabel }}</span></td>
+                    <td class="detail-col"><button type="button" style="white-space: nowrap;" @click.stop="toggleExpand(row.id)">{{ expandedRows.has(row.id) ? '收起' : '详情' }}</button></td>
+                  </tr>
+                  <tr v-if="expandedRows.has(row.id)" class="detail-row">
+                    <td colspan="7">
+                      <dl>
+                        <div><dt>问题说明</dt><dd>{{ row.reason || '-' }}</dd></div>
+                        <div><dt>原始文案</dt><dd>{{ row.rawText || '-' }}</dd></div>
+                        <div v-if="row.surrounding"><dt>上下文</dt><dd class="code-text">{{ row.surrounding }}</dd></div>
+                        <div class="meta-list">
+                          <span v-if="row.legalRef">法规：{{ row.legalRef }}</span>
+                          <span v-if="row.rulePack">规则包：{{ row.rulePack }}</span>
+                          <span v-if="row.pageHint">页面：{{ row.pageHint }}</span>
+                        </div>
+                      </dl>
+                    </td>
+                  </tr>
+                </template>
+                <tr v-if="!pageRows.length">
+                  <td colspan="7">
+                    <div class="empty-state">
+                      <strong>没有找到匹配的问题</strong>
+                      <span>调整筛选条件或确认本次扫描结果为空。</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination" v-if="totalPages > 1">
+            <button type="button" :disabled="currentPage === 1" @click="currentPage -= 1">上一页</button>
+            <span>第 {{ currentPage }} / {{ totalPages }} 页</span>
+            <button type="button" :disabled="currentPage === totalPages" @click="currentPage += 1">下一页</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="./data/config.js"></script>
+  <script src="./data/tableData.js"></script>
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        const config = window.__TEXT_GOVERN_REPORT_CONFIG__ || {};
+        const rows = window.__TEXT_GOVERN_TABLE_DATA__ || [];
+        const severityOptions = (config.filters && config.filters.severities) || [];
+        const categoryOptions = (config.filters && config.filters.categories) || [];
+        const sourceOptions = (config.filters && config.filters.sources) || [];
+
+        return {
+          config: {
+            title: '整改报告',
+            meta: {},
+            stats: { total: 0, bySeverity: {}, byCategory: {} },
+            ...config,
+          },
+          rows,
+          severityOptions,
+          categoryOptions,
+          sourceOptions,
+          selectedSeverities: severityOptions.map((item) => item.value),
+          selectedCategories: categoryOptions.map((item) => item.value),
+          selectedSources: sourceOptions.map((item) => item.value),
+          searchQuery: '',
+          sortKey: 'severity',
+          sortAsc: true,
+          currentPage: 1,
+          pageSize: 10,
+          expandedRows: new Set(),
+          quickSeverity: '',
+          quickCategory: '',
+          columns: [
+            { key: 'severity', label: '等级' },
+            { key: 'category', label: '类型' },
+            { key: 'file', label: '文件位置' },
+            { key: 'matched', label: '命中词' },
+            { key: 'suggestion', label: '建议' },
+            { key: 'source', label: '来源' },
+          ],
+        };
+      },
+      computed: {
+        stats() {
+          return this.config.stats || { total: 0, bySeverity: {}, byCategory: {} };
+        },
+        generatedAtText() {
+          const value = this.config.meta && this.config.meta.generatedAt;
+          return value ? new Date(value).toLocaleString('zh-CN') : '-';
+        },
+        filteredRows() {
+          const query = this.searchQuery.toLowerCase();
+          return this.rows
+            .filter((row) => this.selectedSeverities.includes(row.severity))
+            .filter((row) => this.selectedCategories.includes(row.category))
+            .filter((row) => this.selectedSources.includes(row.source))
+            .filter((row) => !this.quickSeverity || row.severity === this.quickSeverity)
+            .filter((row) => !this.quickCategory || row.category === this.quickCategory)
+            .filter((row) => {
+              if (!query) return true;
+              return [row.file, row.matched, row.reason, row.suggestion, row.rawText]
+                .join(' ')
+                .toLowerCase()
+                .includes(query);
+            })
+            .sort((a, b) => this.compareRows(a, b));
+        },
+        totalPages() {
+          return Math.max(1, Math.ceil(this.filteredRows.length / this.pageSize));
+        },
+        pageRows() {
+          const start = (this.currentPage - 1) * this.pageSize;
+          return this.filteredRows.slice(start, start + this.pageSize);
+        },
+      },
+      watch: {
+        filteredRows() {
+          this.currentPage = Math.min(this.currentPage, this.totalPages);
+        },
+        pageSize() {
+          this.currentPage = 1;
+        },
+      },
+      methods: {
+        severityCount(value) {
+          return (this.stats.bySeverity && this.stats.bySeverity[value]) || 0;
+        },
+        categoryCount(value) {
+          return (this.stats.byCategory && this.stats.byCategory[value]) || 0;
+        },
+        percent(count) {
+          return this.stats.total ? Math.round((count / this.stats.total) * 100) : 0;
+        },
+        visibleCount(key, value) {
+          return this.filteredRows.filter((row) => row[key] === value).length;
+        },
+        toggleQuickSeverity(value) {
+          this.quickSeverity = this.quickSeverity === value ? '' : value;
+          this.currentPage = 1;
+        },
+        toggleQuickCategory(value) {
+          this.quickCategory = this.quickCategory === value ? '' : value;
+          this.currentPage = 1;
+        },
+        sortBy(key) {
+          if (this.sortKey === key) this.sortAsc = !this.sortAsc;
+          else {
+            this.sortKey = key;
+            this.sortAsc = true;
+          }
+        },
+        compareRows(a, b) {
+          const order = { '严重违禁': 0, '高风险': 1, '需关注': 2, '推荐修改': 3 };
+          let av = a[this.sortKey] || '';
+          let bv = b[this.sortKey] || '';
+          if (this.sortKey === 'severity') {
+            av = order[av] ?? 99;
+            bv = order[bv] ?? 99;
+          }
+          if (av < bv) return this.sortAsc ? -1 : 1;
+          if (av > bv) return this.sortAsc ? 1 : -1;
+          return 0;
+        },
+        toggleExpand(id) {
+          if (this.expandedRows.has(id)) this.expandedRows.delete(id);
+          else this.expandedRows.add(id);
+        },
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>

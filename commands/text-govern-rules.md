@@ -1,5 +1,5 @@
 ---
-description: "用 text-govern 按 6 维度（合规底线/品牌调性/术语统一/业务语义/UX文案/上下文）扫描当前项目源码，生成强相关的 Excel 规则库到 text-govern-rules/generated/。当用户说「生成规则库」「初始化规则」「更新规则包」「生成文案规则」时使用。"
+description: "完整执行 skills/text-govern/SKILL.md「Init 场景」全文（四角色、输出契约、skills/prompts/generate-rules.md 六维度与生成步骤、步骤 A~E 含 rules:verify 与可选 analyze），扫描项目源码生成强相关 Excel 规则库到 text-govern-rules/generated/。当用户说「生成规则库」「初始化规则」「更新规则包」「生成文案规则」时使用。"
 ---
 
 # /text-govern-rules — AI 生成 Excel 规则库
@@ -29,7 +29,7 @@ description: "用 text-govern 按 6 维度（合规底线/品牌调性/术语统
 
 ## 执行
 
-1. 按 SKILL.md Init 场景 **步骤 A~E** 完整执行（含业务画像确认、6 维度治理）。
+1. 按 SKILL.md **Init 场景** 完整执行，包含**步骤 A~E**（含业务画像确认、6 维度治理）。
 2. 写入 `text-govern-rules/generated/` 后，**必须运行**：
    ```bash
    TG_CMD rules:verify
