@@ -91,8 +91,14 @@ npm version patch    # patch（小修复、不影响功能）或 minor（新增�
 npm publish --registry=https://registry.npmjs.org/
 （npm version 会改 package.json/package-lock.json 版本并打 git tag；若不想动 git，也可手改版本号后再 npm publish。）
 
-核对线上版本
+# 核对线上版本
 npm view text-govern version
+
+# 更新版本
+npm update -g text-govern --registry=https://registry.npmjs.org/
+
+# 查看本地安装的版本
+npm list -g text-govern
 ```
 
 **发布说明**：未限定作用域的包使用 `npm publish` 即可公开发布；只有带 `@scope/` 的包首次发布才需要 `npm publish --access public`。
