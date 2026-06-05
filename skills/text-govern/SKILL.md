@@ -54,14 +54,17 @@ TG_CMD analyze
 
 ### 步骤 3 — AI 语义深度分析
 
-读取 `.text-govern/extracted.json`，按 `skills/prompts/analyze-semantics.md` 指南：
+读取 `.text-govern/extracted.json`，按 `skills/prompts/analyze-semantics.md` 指南执行任务 1~5；
+若 `rules.includeStandardWords = true` 则额外执行**任务 6**（标准术语识别）：
 
+0. **系统背景**：读取 `systemBackground` 配置；若为空则生成约 200 字以内的系统背景介绍，**必须**写入 `findings.ai.json.meta.systemBackground`（报告 header 展示）
 1. 对所有 fragments 进行语义聚类——找出同一业务字段被用了多种不同表达
 2. 检测疑似歧义词（词意在上下文中含义不明确或与页面业务不符）
 3. 检测上下文语境不一致
-4. 将结果按 `findings.ai.json` schema 写入 `.text-govern/findings.ai.json`
+4. **（当 `rules.includeStandardWords = true`）** 读取 `scripts/text-govern/config/standard-product.json` 与 `standard-slogan.json`，对 fragments 做模糊/谐音/篡改判定；多语言（英文名/拼音/不同语言翻译）不计错误
+5. 将结果按 `findings.ai.json` schema 写入 `.text-govern/findings.ai.json`
 
-如数据量大，每批 100 条。只写入确认有问题的条目。
+如数据量大，每批 100 条。只写入确认有问题的条目。`meta.systemBackground` **无论是否有 findings 都必须写入**。
 
 ### 步骤 4 — 生成 HTML 报告
 
@@ -72,9 +75,10 @@ TG_CMD report
 ### 步骤 5 — 总结
 
 1. 告知报告路径：`.text-govern/report/index.html`
-2. 按中文风险等级汇总：`严重违禁 / 高风险 / 需关注 / 推荐修改`
-3. 列出 TOP 5 最严重问题（附文件 + 行号）
-4. 如有 `严重违禁` 问题，明确提示必须修复才能发布
+2. 说明报告 header 中的系统背景介绍来源（config / AI 生成 / 占位提示）
+3. 按中文风险等级汇总：`严重违禁 / 高风险 / 需关注 / 推荐修改`
+4. 列出 TOP 5 最严重问题（附文件 + 行号）
+5. 如有 `严重违禁` 问题，明确提示必须修复才能发布
 
 ---
 
@@ -111,7 +115,10 @@ TG_CMD report
 ### 步骤 A · 环境与配置确认
 
 1. 运行 `TG_CMD init` 确保目录/配置就绪
-2. 读取 `text-govern.config.js` 中的 `industry`：留空则从源码/路由自行判断；非空则作为业务上下文
+2. 读取 `text-govern.config.js` 中的以下字段：
+   - `industry`：留空则从源码/路由自行判断；非空则作为业务上下文
+   - `rules.includeDefaults`：若为 `true`，在步骤 C 生成 banned.xlsx 时需按 `skills/prompts/generate-rules.md`「内置基线类目限定范围」章节，扫代码库命中基线类目词并写入；若为 `false` 则跳过基线类目
+   - `rules.includeStandardWords`：若为 `true`，在步骤 5（AI 语义分析）中执行任务 6；此处无需操作，仅记录供后续使用
 3. 确保 `.text-govern/extracted.json` 存在；不存在则先 `TG_CMD scan`
 
 ### 步骤 B · 业务画像（必须先做，再写规则）
@@ -128,6 +135,8 @@ TG_CMD report
 ### 步骤 C · 6 维度治理
 
 1. **合规底线**（违禁/行业合规/政治宗教民族；适用法规由 AI 按系统类型判定）
+   - 若 `rules.includeDefaults = true`：额外按「内置基线类目限定范围」扫代码库命中基线分类（色情违规/政治敏感/暴恐违禁/涉枪涉爆/广告违规），**只输出有证据的词，不堆砌通用词库**
+   - 若 `rules.includeDefaults = false`：跳过基线类目，只输出行业/业务/品牌专有合规词
 2. **品牌与调性**（客户称谓、产品名一致、B 端/C 端口吻分寸）
 3. **术语统一**（同义异写、动作动词、字段名）
 4. **页面级业务语义**（同字段在不同页面的语义歧义）

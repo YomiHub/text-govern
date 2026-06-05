@@ -37,7 +37,6 @@ program
   .option('--config <file>', '配置文件路径')
   .option('--input <file>', 'extracted.json 路径')
   .option('--out <file>', '输出 findings.rule.json 路径')
-  .option('--no-baseline', '跳过公开基线扫描（即使 rules.includeDefaults = true）')
   .action(async (opts) => {
     const { run } = require('../lib/commands/analyze');
     await run(opts);

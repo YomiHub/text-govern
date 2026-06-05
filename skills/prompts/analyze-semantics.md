@@ -27,14 +27,15 @@
 3. **隐式术语混用** — 没有明确定义为别名，但在语义上描述同一个概念
 4. **推荐优化** — 虽不违规，但措辞可以更专业、更清晰
 5. **行业合规深度研判** — 基于系统落地形态与受众，识别规则词表难以覆盖的隐式/上下文合规风险
+6. **标准术语识别**（仅当 `text-govern.config.js` 中 `rules.includeStandardWords = true` 时执行）— 对照标准产品名/宣传语 JSON 文件，识别代码库中出现的非标准写法（拼写错误、谐音、形近字、缩写篡改等）
 
 ---
 
 ## 分析方法
 
-### Step 1: 业务画像（为任务 5 服务，其他任务也可参考）
+### Step 1: 业务画像与系统背景（为任务 5 服务，其他任务也可参考）
 
-在开始之前，先完成系统画像：
+在开始之前，先完成系统画像，并准备报告 header 所需的**系统背景介绍**：
 
 1. 读取 `text-govern.config.js` 中的 `industry` 字段（若为空则进入步骤 2）
 2. 如果 `industry` 为空，从 `app.json` 路由、页面标题、核心文案、接口命名中推断系统类型
@@ -43,6 +44,18 @@
    - **公开范围**：面向公众（C 端）/ 企业用户（B 端）/ 企业内部
    - **核心功能**：含交易 / 个人信息收集 / 支付 / 金融产品 / 医疗健康 / 教育培训 / 食品保健品 / 营销推广 / 其他
 4. 根据上述判断，**列出本系统实际应遵守的法规范围**（不套模板，按实际情况判断）
+
+**系统背景介绍（写入 `findings.ai.json.meta.systemBackground`，供报告 header 展示）**：
+
+- 读取 `text-govern.config.js` 的 `systemBackground` 字段
+- **若已配置**：直接沿用（超过 200 字则截断至 200 字），写入 `meta.systemBackground`
+- **若为空**：基于 `extracted.json`（pageHint、高频文案、路由/标题）、`industry`（若有）生成一段**中文系统背景介绍**，要求：
+  - 说明系统类型、目标用户、核心业务场景
+  - **不超过 200 字**，客观精炼
+  - 不编造未在源码中出现的功能或模块
+  - 写入 `meta.systemBackground`
+
+> `industryProfile` 供合规分析上下文；`systemBackground` 供报告 header 人类可读摘要，两者职责分离。
 
 ### Step 2: 按 pageHint 分组
 
@@ -66,6 +79,54 @@
 逐条检查高频词语：
 - 该词在不同 pageHint 下是否有不同含义
 - 例如："分数" 在积分页是积分，在业绩页是业绩，但在某页同时出现 → 歧义
+
+### Step 7: 标准术语对比（任务 6 — 仅当 `rules.includeStandardWords = true`）
+
+**前置**：先读取 `text-govern.config.js` 中的 `rules.includeStandardWords`；若为 `false`（默认值），
+直接跳过本 Step，不执行任何匹配。
+
+**数据加载**：
+
+1. 读取 `scripts/text-govern/config/standard-product.json`（若文件不存在则跳过产品名部分）
+   - 结构：`[{ code, name, genericName, brand, trademark }]`
+   - 有效标准词：`name`（产品名）、`genericName`（通用名）、`brand`（品牌）、`trademark`（商标）中非空的字段
+2. 读取 `scripts/text-govern/config/standard-slogan.json`（若文件不存在则跳过宣传语部分）
+   - 结构：`[{ type, slogan }]`
+   - 有效标准词：`slogan` 字段
+
+**匹配逻辑**：
+
+对每条 fragment 的 `normalized` 字段，依次检查是否出现了以下非标准写法：
+
+- **拼写错别字**：如「澳特絲」（丝/絲混淆）vs 标准「澳特斯」
+- **谐音/形近字**：如「澳特思」「澳特司」「奥特斯」（奥/澳混淆）
+- **缩写/截断**：如宣传语被截断或不完整引用
+- **篡改变体**：标准宣传语的措辞被改动
+
+**豁免规则**（以下情况不报告）：
+
+- 英文名称（如品牌的英文缩写、拉丁文通用名）
+- 纯拼音写法（如「Aoteisi」等拼音表示）
+- 多语言翻译（不同语言的等价表述，如日文、韩文版产品名）
+- `brand` 或 `trademark` 字段中与标准一致的英文简称
+- 只是产品规格/包装描述差异（括号内的剂量/数量等），不影响产品名本身
+
+**命中时的 finding 格式**：
+
+```json
+{
+  "category": "词义统一类",
+  "severity": "需关注",
+  "rulePack": "ai.terminology.standard-mismatch",
+  "suggestion": "建议改为标准写法：<标准词>",
+  "reason": "代码库中出现「<命中文本>」，与标准产品名/宣传语「<标准词>」不一致（<差异类型：拼写错误/谐音/形近字/截断等>）"
+}
+```
+
+**效率说明**：本步骤只对 fragment 中出现疑似品牌/产品相关词汇时执行比对，
+不对所有 fragment 做全量扫描；当确认某个 fragment 与标准词无关时直接跳过。
+
+---
 
 ### Step 6: 行业合规隐式风险扫描（任务 5）
 
@@ -92,6 +153,7 @@
     "generatedAt": "{{ISO_DATE}}",
     "totalFindings": 5,
     "method": "ai-semantic-analysis",
+    "systemBackground": "{{配置值或 AI 生成的背景介绍，≤200字}}",
     "industryProfile": {
       "industry": "{{从 config 读取或推断}}",
       "terminalType": "{{终端类型}}",
@@ -149,11 +211,12 @@
 
 ### rulePack 类型
 
-**语义/术语/优化类**（任务 1-4）：
+**语义/术语/优化类**（任务 1-4、6）：
 - `ai.semantic.path-content-mismatch` — 路径名与内容语义不符
 - `ai.semantic.cross-page-inconsistency` — 跨页面同字段多种写法
 - `ai.semantic.context-ambiguity` — 上下文歧义
 - `ai.terminology.implicit-alias` — 隐式别名（未定义为术语但语义相同）
+- `ai.terminology.standard-mismatch` — 标准产品名/宣传语非标准写法（拼写错误/谐音/篡改）
 - `ai.recommend.clarity` — 措辞清晰度推荐优化
 
 **行业合规类**（任务 5）：
@@ -178,8 +241,14 @@
    - 任务 3（隐式术语混用）→ `category: "词义统一类"`，`severity: "需关注"`
    - 任务 4（推荐优化，措辞清晰度）→ `category: "优化类"`，`severity: "推荐修改"`
    - 任务 5（行业合规深度研判）→ `category: "行业合规"`，`severity: "严重违禁"` / `"高风险"` / `"需关注"`
+   - 任务 6（标准术语识别）→ `category: "词义统一类"`，`severity: "需关注"`，`rulePack: "ai.terminology.standard-mismatch"`
 7. **行业合规任务的要求**：
    - 先完成 Step 1 业务画像，再执行扫描；不做画像不得产出行业合规类 findings
    - `legalRef` 有明确法规依据时务必填写；无法确定则留空，**不允许杜撰法规条款编号**
    - 任务 5 只报告规则引擎词表**覆盖不到**的隐式/上下文风险，不重复词表已有命中
    - 《广告法》极限词只是行业合规的示例之一；实际适用哪些法规，按系统类型判断，不要默认套用广告法
+8. **标准术语任务（任务 6）的豁免要求**：
+   - 仅当 `rules.includeStandardWords = true` 时执行，否则直接跳过
+   - 英文品牌名、拉丁文通用名、纯拼音写法、多语言翻译**不报告**
+   - 括号内的剂量/数量/包装规格差异**不报告**，只关注核心产品名/品牌/宣传语本身
+   - 只写入**确认有问题**的条目，模棱两可的不写入

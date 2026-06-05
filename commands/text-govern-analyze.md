@@ -29,13 +29,13 @@ TG_CMD analyze
 
 ## 完成后汇报
 
-- 加载了多少条规则（基线违禁词 / 项目违禁词 / 术语 / 语义）
-- 公开基线命中数（来自 konsheng/Sensitive-lexicon，仅当 `rules.includeDefaults = true` 时有值）
-- 违禁/行业词命中数（项目规则）
+- 加载了多少条规则（违禁词 / 术语 / 语义）
+- 违禁/行业词命中数
 - 术语不统一数
 - 语义歧义数
 - 合计问题数（按风险等级分列）
-- 来源分布（`stats.bySource`）：公开基线命中 / 项目规则命中
 - 输出文件路径：`.text-govern/findings.rule.json`
 
-如需 AI 进一步语义深度分析，请使用 `/text-govern-report` 或 `/text-govern`。
+> 注：基线违禁类目（色情/政治/暴恐/广告/涉枪涉爆）已在 `/text-govern-rules` 阶段由 AI 按项目证据写入 banned.xlsx，analyze 阶段直接匹配项目规则即可。
+
+如需 AI 进一步语义深度分析（含标准产品名/宣传语识别），请使用 `/text-govern-report` 或 `/text-govern`。

@@ -41,12 +41,15 @@ TG_CMD analyze
 
 ## 步骤 3 — AI 语义深度分析
 
-读取 `.text-govern/extracted.json`，按照 `skills/text-govern/SKILL.md` 中步骤 3 的指南：
+读取 `.text-govern/extracted.json`，按照 `skills/prompts/analyze-semantics.md` 指南执行任务 1~5；
+若 `rules.includeStandardWords = true` 则额外执行**任务 6**（标准术语识别）：
 
+0. **系统背景**：读取 `text-govern.config.js` 的 `systemBackground`；若为空则基于源码生成约 200 字以内的系统背景介绍，**必须**写入 `findings.ai.json.meta.systemBackground`（供报告 header 展示）
 1. 对所有 fragments 进行语义聚类，找出同一业务字段的多种表达
 2. 检测疑似歧义词
 3. 检测上下文语境不一致
-4. 将结果写入 `.text-govern/findings.ai.json`
+4. **（当 `rules.includeStandardWords = true`）** 读取 `scripts/text-govern/config/standard-product.json` 与 `standard-slogan.json`，识别代码库中标准产品名/宣传语的非标准写法（多语言不计错误）
+5. 将结果写入 `.text-govern/findings.ai.json`
 
 ## 步骤 4 — 生成 HTML 报告
 

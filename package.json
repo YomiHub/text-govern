@@ -19,9 +19,8 @@
   ],
   "scripts": {
     "test": "node ./test/text-govern.behavior.test.js",
-    "fetch:baseline": "node scripts/fetch-public-baseline.js",
-    "build:defaults": "node scripts/fetch-public-baseline.js && node scripts/build-default-rules.js",
-    "prepublishOnly": "node scripts/fetch-public-baseline.js && node scripts/build-default-rules.js && npm test"
+    "build:defaults": "node scripts/build-default-rules.js && node scripts/build-standard-rules.js",
+    "prepublishOnly": "node scripts/build-default-rules.js && node scripts/build-standard-rules.js && npm test"
   },
   "keywords": [
     "text-govern",

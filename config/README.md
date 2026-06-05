@@ -7,37 +7,25 @@
 
 | 文件 | Sheet | 用途 |
 |------|-------|------|
-| `banned.default.xlsx` | 违禁违规词 | 基于公开开源词库（konsheng/Sensitive-lexicon MIT + fwwdn/sensitive-stop-words Apache-2.0），构建期拉取生成 |
 | `terminology.default.xlsx` | 术语统一 | 通用 UI 文案术语统一（按钮、空状态、错误提示等），手动维护 |
 | `semantic.default.xlsx` | 业务语义 | 默认留空——业务语义高度项目相关，建议由 AI 在 `text-govern-rules/` 中维护 |
-| `THIRD_PARTY_NOTICES.md` | — | 三方词库许可声明与锁定的 commit SHA |
+| `standard-product.xlsx` | 产品名/宣传语 | 标准产品名称与宣传语，由 `scripts/build-standard-rules.js` 转换为 JSON 供 AI 语义阶段使用 |
 
-## 词库来源
+## 基线违禁类目
 
-`banned.default.xlsx` 由 `scripts/fetch-public-baseline.js` 构建期拉取生成，词库涵盖：
+`banned.default.xlsx` 已移除。当 `rules.includeDefaults = true` 时，AI 在
+`/text-govern-rules` 阶段会按下列基线类目扫描代码库，仅将项目中**确有命中证据**的词写入
+`text-govern-rules/generated/banned.xlsx`：
 
-| 分类 | 风险等级 | 来源 |
-|------|----------|------|
-| 色情违规 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 政治敏感 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 暴恐违禁 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 涉枪涉爆 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 广告违规 | 高风险 | konsheng/Sensitive-lexicon + fwwdn/sensitive-stop-words |
+| 基线类目 | 参考词库范围 |
+|----------|------------|
+| 色情违规 | konsheng/Sensitive-lexicon 色情类型/色情词库 |
+| 政治敏感 | konsheng/Sensitive-lexicon 政治类型/反动词库 |
+| 暴恐违禁 | konsheng/Sensitive-lexicon 暴恐词库 |
+| 涉枪涉爆 | konsheng/Sensitive-lexicon 涉枪涉爆 |
+| 广告违规 | 违法广告极限词、医疗夸大、虚假宣传 |
 
-**有意不覆盖（请通过 AI 生成或手动 custom 维护）**：
-- 行业专有合规词（绝对化用语、功效宣称、保本承诺等，适用范围因行业而异）— 由 AI 结合项目落地形态与适用法规生成
-- 金融合规（资管新规保本/保收益）— 行业强相关
-- 医疗合规（治愈/根治等）— 行业强相关
-- 教育合规、食品合规等——同上
-
-## 刷新词库
-
-词库版本锁定于指定 commit SHA（见 `THIRD_PARTY_NOTICES.md`）。如需同步上游更新：
-
-```bash
-cd scripts/text-govern
-npm run fetch:baseline   # 需要网络，重新拉取并覆盖 banned.default.xlsx
-```
+这种方式避免了运行期加载数万条词汇的开销，同时让识别更贴近项目实际情况。
 
 ## 启用方式
 
@@ -45,8 +33,13 @@ npm run fetch:baseline   # 需要网络，重新拉取并覆盖 banned.default.x
 
 ```js
 module.exports = {
-  rules: { includeDefaults: true },
+  rules: {
+    // 开启后 /text-govern-rules 阶段 AI 按基线类目扫代码库写入 banned.xlsx
+    includeDefaults: true,
+    // 开启后 /text-govern-report AI 语义阶段识别标准产品名/宣传语非标准写法
+    includeStandardWords: true,
+  },
 };
 ```
 
-默认 `includeDefaults: false`，避免基线规则干扰纯项目扫描。
+默认均为 `false`，避免基线规则干扰纯项目扫描。

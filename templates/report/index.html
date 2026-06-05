@@ -12,6 +12,12 @@
       <div>
         <p class="eyebrow">Text Govern Audit</p>
         <h1>{{ config.title || '整改报告' }}</h1>
+        <p class="system-background" v-if="systemBackgroundText">
+          {{ systemBackgroundText }}
+        </p>
+        <p class="system-background is-empty" v-else>
+          未配置系统背景，请在 text-govern.config.js 填写 systemBackground，或先运行 AI 语义分析。
+        </p>
         <p class="meta-line">
           生成时间：{{ generatedAtText }} · 行业：{{ config.meta.industry || '-' }} · 扫描文件：{{ config.meta.filesScanned || 0 }} · 文案片段：{{ config.meta.totalFragments || 0 }}
         </p>
@@ -238,6 +244,9 @@
         generatedAtText() {
           const value = this.config.meta && this.config.meta.generatedAt;
           return value ? new Date(value).toLocaleString('zh-CN') : '-';
+        },
+        systemBackgroundText() {
+          return (this.config.meta && this.config.meta.systemBackground) || '';
         },
         filteredRows() {
           const query = this.searchQuery.toLowerCase();

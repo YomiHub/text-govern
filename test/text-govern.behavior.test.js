@@ -9,7 +9,8 @@ const XLSX = require('xlsx');
 const { run: init } = require('../lib/commands/init');
 const { loadAllRules, loadBaselineRules } = require('../lib/rules/loader');
 const { buildStats, normalizeSeverity, normalizeCategory } = require('../lib/severity');
-const { generateHtmlReport } = require('../lib/reporters/html');
+const { generateHtmlReport, truncateSystemBackground } = require('../lib/reporters/html');
+const { MAX_SYSTEM_BACKGROUND_LENGTH } = require('../lib/constants');
 
 function tempProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'text-govern-'));
@@ -28,6 +29,7 @@ async function testInitCreatesReusableEmptyExcelTemplates() {
 
   const config = fs.readFileSync(path.join(cwd, 'text-govern.config.js'), 'utf8');
   assert.match(config, /industry:\s*''/, 'init config should allow empty industry for AI inference');
+  assert.match(config, /systemBackground:\s*''/, 'init config should include empty systemBackground field');
 
   const customDir = path.join(cwd, 'text-govern-rules', 'custom');
   for (const file of ['banned.xlsx', 'terminology.xlsx', 'semantic.xlsx']) {
@@ -123,7 +125,11 @@ function testVueReportDirectoryIsGeneratedWithDataFiles() {
     ruleFindings,
     aiFindings,
     scanMeta: { filesScanned: 12, totalFragments: 88 },
-    config: { industry: '医药系统', severity: { failOn: '高风险' } },
+    config: {
+      industry: '医药系统',
+      systemBackground: '面向医药代理商的 B 端小程序，提供订单与业绩管理。',
+      severity: { failOn: '高风险' },
+    },
     outputDir,
   });
 
@@ -137,6 +143,7 @@ function testVueReportDirectoryIsGeneratedWithDataFiles() {
   assert.ok(!indexHtml.includes('__DATA__'), 'Vue template should not contain old inline data placeholder');
   assert.ok(indexHtml.includes('https://unpkg.com/vue@3/dist/vue.global.prod.js'), 'report should use Vue CDN');
   assert.ok(indexHtml.includes('./data/config.js'), 'report should load config data file');
+  assert.ok(indexHtml.includes('system-background'), 'report header should include system background block');
   assert.ok(indexHtml.includes('./data/tableData.js'), 'report should load table data file');
 
   const config = readGlobalDataScript(
@@ -144,6 +151,11 @@ function testVueReportDirectoryIsGeneratedWithDataFiles() {
     'window.__TEXT_GOVERN_REPORT_CONFIG__'
   );
   assert.strictEqual(config.meta.industry, '医药系统');
+  assert.strictEqual(
+    config.meta.systemBackground,
+    '面向医药代理商的 B 端小程序，提供订单与业绩管理。'
+  );
+  assert.strictEqual(config.meta.systemBackgroundSource, 'config');
   assert.strictEqual(config.meta.filesScanned, 12);
   assert.deepStrictEqual(config.stats, buildStats([...ruleFindings, ...aiFindings]));
 
@@ -277,18 +289,22 @@ function testAiGeneratedRulesCanBeExcel() {
 function testDefaultsAreLoadedFromExcelConfig() {
   const defaults = require('../lib/rules/defaults');
 
-  assert.ok(defaults.BANNED_DEFAULTS.length > 30, '内置违禁词需覆盖公开敏感词基线，至少 30+ 条');
+  // banned.default.xlsx has been removed; BANNED_DEFAULTS no longer exists.
+  assert.strictEqual(
+    defaults.BANNED_DEFAULTS,
+    undefined,
+    'defaults.js 不应再导出 BANNED_DEFAULTS（banned 已由 Prompt 方式接管）'
+  );
+
   assert.ok(defaults.TERMINOLOGY_DEFAULTS.length >= 5, '内置术语统一需要至少 5 条');
 
-  // Check categories from public baseline lexicons (not the old hardcoded list)
-  const categories = new Set(defaults.BANNED_DEFAULTS.map((r) => r.category));
-  for (const required of ['色情违规', '政治敏感', '广告违规']) {
-    assert.ok(categories.has(required), `内置默认违禁词需要覆盖分类: ${required}`);
-  }
-
   assert.ok(
-    fs.existsSync(path.join(defaults.CONFIG_DIR, 'banned.default.xlsx')),
-    'defaults.js 应当以 scripts/text-govern/config/banned.default.xlsx 为数据源'
+    fs.existsSync(path.join(defaults.CONFIG_DIR, 'terminology.default.xlsx')),
+    'defaults.js 应当以 scripts/text-govern/config/terminology.default.xlsx 为数据源'
+  );
+  assert.ok(
+    !fs.existsSync(path.join(defaults.CONFIG_DIR, 'banned.default.xlsx')),
+    'banned.default.xlsx 应已被移除（基线改为 Prompt 方式）'
   );
 }
 
@@ -373,29 +389,25 @@ async function testInstallerDryRunWritesNothing() {
   );
 }
 
-// ── 新增：baseline 通道测试 ──────────────────────────────────────────────────
+// ── baseline 通道测试（已更新为 Prompt 方案语义）────────────────────────────
 
 function testLoadBaselineRulesReturnsEmptyWhenIncludeDefaultsFalse() {
   const baseline = loadBaselineRules({
     rules: { includeDefaults: false },
   });
-  assert.deepStrictEqual(baseline.banned, [], 'includeDefaults=false: baseline.banned should be empty');
+  assert.deepStrictEqual(baseline.banned, [], 'includeDefaults=false: baseline.banned should always be empty');
   assert.deepStrictEqual(baseline.terminology, [], 'includeDefaults=false: baseline.terminology should be empty');
   assert.deepStrictEqual(baseline.semantic, [], 'includeDefaults=false: baseline.semantic should be empty');
 }
 
-function testLoadBaselineRulesReturnsDataWhenIncludeDefaultsTrue() {
-  const defaults = require('../lib/rules/defaults');
-  // Only run if banned.default.xlsx exists (offline/CI may not have it yet until fetch:baseline runs)
-  if (defaults.BANNED_DEFAULTS.length === 0) {
-    console.log('  skip: banned.default.xlsx 不存在或为空，请先运行 npm run fetch:baseline');
-    return;
-  }
-
-  const baseline = loadBaselineRules({
-    rules: { includeDefaults: true },
-  });
-  assert.ok(baseline.banned.length > 0, 'includeDefaults=true: baseline.banned should have entries');
+function testLoadBaselineRulesAlwaysReturnEmptyBanned() {
+  // banned is always [] regardless of includeDefaults since baseline has moved to Prompt approach
+  const baselineOff = loadBaselineRules({ rules: { includeDefaults: false } });
+  const baselineOn = loadBaselineRules({ rules: { includeDefaults: true } });
+  assert.deepStrictEqual(baselineOff.banned, [], 'includeDefaults=false: banned always empty');
+  assert.deepStrictEqual(baselineOn.banned, [], 'includeDefaults=true: banned always empty (Prompt-driven now)');
+  // terminology should be populated when includeDefaults=true (from terminology.default.xlsx)
+  assert.ok(baselineOn.terminology.length >= 5, 'includeDefaults=true: terminology defaults should have entries');
 }
 
 function testLoadAllRulesDoesNotIncludeBaselineWhenExcluded() {
@@ -457,45 +469,18 @@ async function testAnalyzeFindings_HaveSourceField() {
     cwd,
     input: path.join(extractedDir, 'extracted.json'),
     out: path.join(extractedDir, 'findings.rule.json'),
-    // Disable baseline so we only see project rule findings in this test
-    noBaseline: true,
   });
 
   assert.ok(result.findings.length > 0, '应当命中项目规则中的"免费送"');
   for (const f of result.findings) {
-    assert.ok(f.source === 'project' || f.source === 'baseline', `finding.source 应为 project 或 baseline, 实际: ${f.source}`);
+    assert.strictEqual(f.source, 'project', `finding.source 应为 project, 实际: ${f.source}`);
   }
-  assert.ok(result.stats.bySource, 'stats 应当包含 bySource 字段');
-  assert.ok('baseline' in result.stats.bySource, 'bySource 应包含 baseline 键');
-  assert.ok('project' in result.stats.bySource, 'bySource 应包含 project 键');
+  // meta should not contain baseline fields
+  assert.strictEqual(result.stats.bySource, undefined, 'bySource 字段已移除');
+  assert.ok(typeof result.stats.bySeverity === 'object', 'stats.bySeverity 应存在');
 }
 
-async function testAnalyzeNoBaselineFlag_SkipsBaselineScan() {
-  const cwd = tempProject();
-  await init({ cwd });
-
-  const extractedDir = path.join(cwd, '.text-govern');
-  fs.writeFileSync(
-    path.join(extractedDir, 'extracted.json'),
-    JSON.stringify({ fragments: [] }),
-    'utf8'
-  );
-
-  const { run: analyzeRun } = require('../lib/commands/analyze');
-
-  // With includeDefaults=true but noBaseline=true, baseline should be skipped
-  const result = await analyzeRun({
-    cwd,
-    input: path.join(extractedDir, 'extracted.json'),
-    out: path.join(extractedDir, 'findings.rule.json'),
-    noBaseline: true,
-  });
-
-  assert.strictEqual(result.stats.bySource.baseline, 0, '--no-baseline 时 bySource.baseline 应为 0');
-  assert.strictEqual(result.findings.filter((f) => f.source === 'baseline').length, 0, '--no-baseline 时不应有 baseline findings');
-}
-
-async function testAnalyzeStats_ContainsBySource() {
+async function testAnalyzeMetaHasNoBaselineFields() {
   const cwd = tempProject();
   await init({ cwd });
 
@@ -511,38 +496,141 @@ async function testAnalyzeStats_ContainsBySource() {
     cwd,
     input: path.join(extractedDir, 'extracted.json'),
     out: path.join(extractedDir, 'findings.rule.json'),
-    noBaseline: true,
   });
 
-  assert.ok(result.stats.bySource !== undefined, 'stats.bySource should always be present');
-  assert.ok(typeof result.stats.bySource.baseline === 'number', 'bySource.baseline should be a number');
-  assert.ok(typeof result.stats.bySource.project === 'number', 'bySource.project should be a number');
+  // baseline fields must be gone
+  const meta = JSON.parse(
+    fs.readFileSync(path.join(extractedDir, 'findings.rule.json'), 'utf8')
+  ).meta;
+  assert.strictEqual(meta.baselineEnabled, undefined, 'meta.baselineEnabled 已移除');
+  assert.strictEqual(meta.baselineVersion, undefined, 'meta.baselineVersion 已移除');
+  assert.strictEqual(meta.rulesLoaded && meta.rulesLoaded.baselineBanned, undefined, 'meta.rulesLoaded.baselineBanned 已移除');
+  assert.ok('includeDefaults' in meta, 'meta.includeDefaults 应存在');
+  assert.ok(typeof result.stats.bySeverity === 'object', 'stats.bySeverity 应存在');
+  assert.strictEqual(result.stats.bySource, undefined, 'stats.bySource 已移除');
 }
 
-function testFetchBaselineScriptExists() {
-  const scriptPath = path.join(__dirname, '..', 'scripts', 'fetch-public-baseline.js');
-  assert.ok(fs.existsSync(scriptPath), 'scripts/fetch-public-baseline.js should exist');
-  // Verify key constants are defined
-  const src = fs.readFileSync(scriptPath, 'utf8');
-  assert.ok(src.includes('KONSHENG_SHA'), 'fetch script should pin konsheng SHA');
-  assert.ok(src.includes('FWWDN_SHA'), 'fetch script should pin fwwdn SHA');
-  assert.ok(src.includes('banned.default.xlsx'), 'fetch script should reference output xlsx');
-  assert.ok(src.includes('THIRD_PARTY_NOTICES.md'), 'fetch script should write THIRD_PARTY_NOTICES.md');
+function testBuildStandardRulesGeneratesJson() {
+  const { main } = require('../scripts/build-standard-rules');
+  main();
+
+  const productPath = path.join(__dirname, '..', 'config', 'standard-product.json');
+  const sloganPath = path.join(__dirname, '..', 'config', 'standard-slogan.json');
+
+  assert.ok(fs.existsSync(productPath), 'standard-product.json 应已生成');
+  assert.ok(fs.existsSync(sloganPath), 'standard-slogan.json 应已生成');
+
+  const products = JSON.parse(fs.readFileSync(productPath, 'utf8'));
+  assert.ok(Array.isArray(products) && products.length > 0, 'standard-product.json 应包含产品数据');
+  const first = products[0];
+  assert.ok('name' in first, '产品对象应包含 name 字段');
+  assert.ok('genericName' in first, '产品对象应包含 genericName 字段');
+  assert.ok('brand' in first, '产品对象应包含 brand 字段');
+  assert.ok('trademark' in first, '产品对象应包含 trademark 字段');
+
+  const slogans = JSON.parse(fs.readFileSync(sloganPath, 'utf8'));
+  assert.ok(Array.isArray(slogans) && slogans.length > 0, 'standard-slogan.json 应包含宣传语数据');
+  assert.ok('type' in slogans[0], '宣传语对象应包含 type 字段');
+  assert.ok('slogan' in slogans[0], '宣传语对象应包含 slogan 字段');
 }
 
-function testPackageJsonHasFetchBaselineScript() {
+function testConfigDefaultsIncludeStandardWordsFalse() {
+  const { loadConfig } = require('../lib/config');
+  const config = loadConfig({ cwd: path.join(__dirname, '..') });
+  assert.strictEqual(
+    config.rules.includeStandardWords,
+    false,
+    'rules.includeStandardWords 默认应为 false'
+  );
+}
+
+function testConfigDefaultsSystemBackgroundEmpty() {
+  const { loadConfig } = require('../lib/config');
+  const config = loadConfig({ cwd: path.join(__dirname, '..') });
+  assert.strictEqual(config.systemBackground, '', 'systemBackground 默认应为空字符串');
+}
+
+function testReportUsesAiSystemBackgroundWhenConfigEmpty() {
+  const cwd = tempProject();
+  const outputDir = path.join(cwd, '.text-govern', 'report');
+  const aiBackground = '面向 C 端用户的医药电商 H5，提供产品浏览与在线下单。';
+
+  generateHtmlReport({
+    ruleFindings: [],
+    aiFindings: [],
+    aiMeta: { systemBackground: aiBackground },
+    scanMeta: { filesScanned: 5, totalFragments: 20 },
+    config: { industry: '', systemBackground: '', severity: { failOn: '严重违禁' } },
+    outputDir,
+  });
+
+  const config = readGlobalDataScript(
+    path.join(outputDir, 'data', 'config.js'),
+    'window.__TEXT_GOVERN_REPORT_CONFIG__'
+  );
+  assert.strictEqual(config.meta.systemBackground, aiBackground);
+  assert.strictEqual(config.meta.systemBackgroundSource, 'ai');
+}
+
+function testReportPrefersConfigSystemBackgroundOverAiMeta() {
+  const cwd = tempProject();
+  const outputDir = path.join(cwd, '.text-govern', 'report');
+
+  generateHtmlReport({
+    ruleFindings: [],
+    aiFindings: [],
+    aiMeta: { systemBackground: 'AI 生成的背景不应覆盖配置值' },
+    config: { systemBackground: '配置中的系统背景优先', severity: { failOn: '严重违禁' } },
+    outputDir,
+  });
+
+  const config = readGlobalDataScript(
+    path.join(outputDir, 'data', 'config.js'),
+    'window.__TEXT_GOVERN_REPORT_CONFIG__'
+  );
+  assert.strictEqual(config.meta.systemBackground, '配置中的系统背景优先');
+  assert.strictEqual(config.meta.systemBackgroundSource, 'config');
+}
+
+function testReportTruncatesSystemBackgroundTo200Chars() {
+  const longText = '背'.repeat(250);
+  const truncated = truncateSystemBackground(longText);
+  assert.strictEqual(truncated.length, MAX_SYSTEM_BACKGROUND_LENGTH);
+  assert.strictEqual(truncated, longText.slice(0, MAX_SYSTEM_BACKGROUND_LENGTH));
+
+  const cwd = tempProject();
+  const outputDir = path.join(cwd, '.text-govern', 'report');
+  generateHtmlReport({
+    ruleFindings: [],
+    aiFindings: [],
+    config: { systemBackground: longText, severity: { failOn: '严重违禁' } },
+    outputDir,
+  });
+
+  const config = readGlobalDataScript(
+    path.join(outputDir, 'data', 'config.js'),
+    'window.__TEXT_GOVERN_REPORT_CONFIG__'
+  );
+  assert.strictEqual(config.meta.systemBackground.length, MAX_SYSTEM_BACKGROUND_LENGTH);
+}
+
+function testPackageJsonHasBuildDefaultsScript() {
   const pkg = require('../package.json');
   assert.ok(
-    pkg.scripts && pkg.scripts['fetch:baseline'],
-    'package.json should define scripts["fetch:baseline"]'
+    pkg.scripts && pkg.scripts['build:defaults'],
+    'package.json 应定义 build:defaults 脚本'
   );
   assert.ok(
-    pkg.scripts['build:defaults'] && pkg.scripts['build:defaults'].includes('fetch-public-baseline'),
-    'build:defaults should invoke fetch-public-baseline.js'
+    !pkg.scripts['fetch:baseline'],
+    'package.json 不应再有 fetch:baseline 脚本（已移除）'
   );
   assert.ok(
-    pkg.scripts['prepublishOnly'] && pkg.scripts['prepublishOnly'].includes('fetch-public-baseline'),
-    'prepublishOnly should invoke fetch-public-baseline.js to ensure baseline is fresh before publish'
+    pkg.scripts['build:defaults'].includes('build-default-rules'),
+    'build:defaults 应调用 build-default-rules.js'
+  );
+  assert.ok(
+    !pkg.scripts['build:defaults'].includes('fetch-public-baseline'),
+    'build:defaults 不应再调用 fetch-public-baseline.js（已移除）'
   );
 }
 
@@ -563,15 +651,20 @@ async function run() {
     testInstallerCopiesAssetsToClaude,
     testInstallerIsIdempotent,
     testInstallerDryRunWritesNothing,
-    // Baseline channel tests
+    // Baseline channel tests (updated for Prompt-driven approach)
     testLoadBaselineRulesReturnsEmptyWhenIncludeDefaultsFalse,
-    testLoadBaselineRulesReturnsDataWhenIncludeDefaultsTrue,
+    testLoadBaselineRulesAlwaysReturnEmptyBanned,
     testLoadAllRulesDoesNotIncludeBaselineWhenExcluded,
     testAnalyzeFindings_HaveSourceField,
-    testAnalyzeNoBaselineFlag_SkipsBaselineScan,
-    testAnalyzeStats_ContainsBySource,
-    testFetchBaselineScriptExists,
-    testPackageJsonHasFetchBaselineScript,
+    testAnalyzeMetaHasNoBaselineFields,
+    // New: standard words + config defaults
+    testBuildStandardRulesGeneratesJson,
+    testConfigDefaultsIncludeStandardWordsFalse,
+    testConfigDefaultsSystemBackgroundEmpty,
+    testReportUsesAiSystemBackgroundWhenConfigEmpty,
+    testReportPrefersConfigSystemBackgroundOverAiMeta,
+    testReportTruncatesSystemBackgroundTo200Chars,
+    testPackageJsonHasBuildDefaultsScript,
   ];
 
   for (const test of tests) {

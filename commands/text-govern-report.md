@@ -27,12 +27,15 @@ description: "用 text-govern 执行 AI 语义深度分析并生成 HTML 整改�
 
 ## 步骤 1 — AI 语义深度分析
 
-读取 `.text-govern/extracted.json`，按照 `skills/text-govern/SKILL.md` 步骤 3 指南：
+读取 `.text-govern/extracted.json`，按照 `skills/prompts/analyze-semantics.md` 指南执行任务 1~5；
+若 `rules.includeStandardWords = true` 则额外执行**任务 6**（标准术语识别）：
 
+0. **系统背景**：读取 `text-govern.config.js` 的 `systemBackground`；若为空则基于源码生成约 200 字以内的系统背景介绍，**必须**写入 `findings.ai.json.meta.systemBackground`（供报告 header 展示）
 1. 对 fragments 进行语义聚类——找出同一业务字段被用了多种不同表达
 2. 检测疑似歧义词（词意在上下文中含义不明确或与页面业务不符）
 3. 检测上下文语境不一致
-4. 将发现的问题按 `findings.ai.json` schema 写入 `.text-govern/findings.ai.json`
+4. **（当 `rules.includeStandardWords = true`）** 读取 `scripts/text-govern/config/standard-product.json` 与 `standard-slogan.json`，对 fragments 做模糊/谐音/篡改判定——识别产品名/宣传语的非标准写法；多语言（英文名/拼音/不同语言翻译）不计错误
+5. 将发现的问题按 `findings.ai.json` schema 写入 `.text-govern/findings.ai.json`
 
 如数据量大，可分批处理（每批 100 条 fragments）。只写入你确认有问题的条目。
 
@@ -45,6 +48,7 @@ TG_CMD report
 ## 步骤 3 — 汇报
 
 1. 报告路径：`.text-govern/report/index.html`（可直接用浏览器打开）
-2. 按中文风险等级汇总问题数
-3. 列出 TOP 5 最严重问题（附文件 + 行号）
-4. 如有 `严重违禁` 问题，明确提示必须修复才能发布
+2. 说明报告 header 中的系统背景介绍来源（config / AI 生成 / 占位提示）
+3. 按中文风险等级汇总问题数
+4. 列出 TOP 5 最严重问题（附文件 + 行号）
+5. 如有 `严重违禁` 问题，明确提示必须修复才能发布

@@ -10,6 +10,7 @@ description: "完整执行 skills/text-govern/SKILL.md「Init 场景」全文（
 
 ### 1. 解析 CLI 前缀（TG_CMD）
 
+
 在**项目根目录**下按顺序尝试，**任一步成功即得到 TG_CMD 并继续，不要中断**；仅当四步均失败时再提示安装。
 
 1. `text-govern --version` 成功 → **TG_CMD** = `text-govern`
@@ -26,6 +27,16 @@ description: "完整执行 skills/text-govern/SKILL.md「Init 场景」全文（
 ### 3. 扫描产物
 
 确认 `.text-govern/extracted.json` 存在；不存在则先运行 `TG_CMD scan`（或 `/text-govern-scan`）。
+
+### 4. 读取开关并注入生成上下文
+
+读取项目根 `text-govern.config.js` 中的以下字段，并将对应的 prompt 段落纳入规则生成上下文：
+
+- **`rules.includeDefaults`**（默认 `false`）：
+  - 若为 `true`：在生成 `banned.xlsx` 时，依照 `skills/prompts/generate-rules.md`「内置基线类目限定范围」章节，扫代码库命中项，将确有证据的词写入 banned.xlsx 对应基线分类（色情违规/政治敏感/暴恐违禁/涉枪涉爆/广告违规）。
+  - 若为 `false`：完全跳过基线类目，项目 banned.xlsx 只含行业/业务/品牌专有合规词。
+- **`rules.includeStandardWords`**（默认 `false`）：
+  - 该开关影响的是 `/text-govern-report` AI 语义阶段（`analyze-semantics.md` 任务 6），此处无需额外操作；仅在汇报时提示用户如需启用标准产品名/宣传语识别请开启此开关。
 
 ## 执行
 
@@ -51,4 +62,4 @@ description: "完整执行 skills/text-govern/SKILL.md「Init 场景」全文（
 - 生成词汇统计、词频统计等与规则匹配无关的内容
 - 使用英文风险等级（critical/high/medium/low）或英文分类
 - 凭空生成与本项目源码无关的规则
-- **重复公开基线词库的通用违禁词**（色情/政治/暴恐/广告垃圾/涉枪涉爆）：CLI 已通过 `rules.includeDefaults` 自动加载 konsheng/Sensitive-lexicon，项目规则只补充行业/业务专有内容
+- **基线类目规则处理**：当 `rules.includeDefaults = false` 时，**禁止**在 banned.xlsx 中生成色情/政治/暴恐/涉枪涉爆/广告违规等基线类目词条；当 `rules.includeDefaults = true` 时，按「前置检查 4」和 `generate-rules.md`「内置基线类目限定范围」章节执行——**只输出有代码库证据的命中词，绝不照抄词库文件，绝不堆砌通用词**

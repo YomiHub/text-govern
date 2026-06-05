@@ -2,20 +2,19 @@
 'use strict';
 
 /**
- * 生成内置默认规则的 Excel 文件，作为 lib/rules/defaults.js 的数据源。
+ * 生成内置默认规则的 Excel 文件。
  *
  * 维护方式：
- *   banned.default.xlsx  — 由 scripts/fetch-public-baseline.js 从公开开源词库生成，
- *                          不在此处硬编码，请勿手动添加违禁词列表。
  *   terminology.default.xlsx — 通用 UI 文案术语统一，在此处手动维护。
  *   semantic.default.xlsx    — 业务语义高度项目相关，默认留空。
  *
+ * 注：banned.default.xlsx 已不再存在。基线违禁词类目（色情/政治/暴恐/广告/涉枪涉爆）
+ * 改由 AI 在 /text-govern-rules 阶段按项目证据按需生成，见
+ * skills/prompts/generate-rules.md 中的「内置基线类目限定范围」章节。
+ *
  * 日常运行：
  *   npm run build:defaults
- *   （即 npm run fetch:baseline && node scripts/build-default-rules.js）
- *
- * 仅刷新术语/语义：
- *   node scripts/text-govern/scripts/build-default-rules.js
+ *   （即 node scripts/build-default-rules.js）
  */
 
 const path = require('path');
@@ -23,7 +22,6 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 
 const CONFIG_DIR = path.join(__dirname, '..', 'config');
-const BANNED_XLSX = path.join(CONFIG_DIR, 'banned.default.xlsx');
 
 // ── 术语统一（手动维护，适用于通用 UI 文案）──────────────────────────────────
 
@@ -62,37 +60,25 @@ const README_MD = `# 内置默认规则（Built-in Defaults）
 
 | 文件 | Sheet | 用途 |
 |------|-------|------|
-| \`banned.default.xlsx\` | 违禁违规词 | 基于公开开源词库（konsheng/Sensitive-lexicon MIT + fwwdn/sensitive-stop-words Apache-2.0），构建期拉取生成 |
 | \`terminology.default.xlsx\` | 术语统一 | 通用 UI 文案术语统一（按钮、空状态、错误提示等），手动维护 |
 | \`semantic.default.xlsx\` | 业务语义 | 默认留空——业务语义高度项目相关，建议由 AI 在 \`text-govern-rules/\` 中维护 |
-| \`THIRD_PARTY_NOTICES.md\` | — | 三方词库许可声明与锁定的 commit SHA |
+| \`standard-product.xlsx\` | 产品名/宣传语 | 标准产品名称与宣传语，由 \`scripts/build-standard-rules.js\` 转换为 JSON 供 AI 语义阶段使用 |
 
-## 词库来源
+## 基线违禁类目
 
-\`banned.default.xlsx\` 由 \`scripts/fetch-public-baseline.js\` 构建期拉取生成，词库涵盖：
+\`banned.default.xlsx\` 已移除。当 \`rules.includeDefaults = true\` 时，AI 在
+\`/text-govern-rules\` 阶段会按下列基线类目扫描代码库，仅将项目中**确有命中证据**的词写入
+\`text-govern-rules/generated/banned.xlsx\`：
 
-| 分类 | 风险等级 | 来源 |
-|------|----------|------|
-| 色情违规 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 政治敏感 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 暴恐违禁 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 涉枪涉爆 | 严重违禁 | konsheng/Sensitive-lexicon |
-| 广告违规 | 高风险 | konsheng/Sensitive-lexicon + fwwdn/sensitive-stop-words |
+| 基线类目 | 参考词库范围 |
+|----------|------------|
+| 色情违规 | konsheng/Sensitive-lexicon 色情类型/色情词库 |
+| 政治敏感 | konsheng/Sensitive-lexicon 政治类型/反动词库 |
+| 暴恐违禁 | konsheng/Sensitive-lexicon 暴恐词库 |
+| 涉枪涉爆 | konsheng/Sensitive-lexicon 涉枪涉爆 |
+| 广告违规 | 违法广告极限词、医疗夸大、虚假宣传 |
 
-**有意不覆盖（请通过 AI 生成或手动 custom 维护）**：
-- 行业专有合规词（绝对化用语、功效宣称、保本承诺等，适用范围因行业而异）— 由 AI 结合项目落地形态与适用法规生成
-- 金融合规（资管新规保本/保收益）— 行业强相关
-- 医疗合规（治愈/根治等）— 行业强相关
-- 教育合规、食品合规等——同上
-
-## 刷新词库
-
-词库版本锁定于指定 commit SHA（见 \`THIRD_PARTY_NOTICES.md\`）。如需同步上游更新：
-
-\`\`\`bash
-cd scripts/text-govern
-npm run fetch:baseline   # 需要网络，重新拉取并覆盖 banned.default.xlsx
-\`\`\`
+这种方式避免了运行期加载数万条词汇的开销，同时让识别更贴近项目实际情况。
 
 ## 启用方式
 
@@ -100,11 +86,16 @@ npm run fetch:baseline   # 需要网络，重新拉取并覆盖 banned.default.x
 
 \`\`\`js
 module.exports = {
-  rules: { includeDefaults: true },
+  rules: {
+    // 开启后 /text-govern-rules 阶段 AI 按基线类目扫代码库写入 banned.xlsx
+    includeDefaults: true,
+    // 开启后 /text-govern-report AI 语义阶段识别标准产品名/宣传语非标准写法
+    includeStandardWords: true,
+  },
 };
 \`\`\`
 
-默认 \`includeDefaults: false\`，避免基线规则干扰纯项目扫描。
+默认均为 \`false\`，避免基线规则干扰纯项目扫描。
 `;
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────
@@ -121,25 +112,6 @@ function writeSheet(filePath, sheetName, rows) {
 
 function main() {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
-
-  // banned.default.xlsx is owned by fetch-public-baseline.js.
-  // We only validate it exists and report, never overwrite it here.
-  if (!fs.existsSync(BANNED_XLSX)) {
-    console.error(
-      '错误：config/banned.default.xlsx 不存在。\n' +
-      '请先运行: npm run fetch:baseline\n' +
-      '（需要网络连接，从公开开源词库拉取并生成该文件）'
-    );
-    process.exit(1);
-  }
-
-  const XLSX_lib = require('xlsx');
-  const wb = XLSX_lib.readFile(BANNED_XLSX);
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX_lib.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-  console.log(
-    `skip:    ${path.relative(process.cwd(), BANNED_XLSX)} (${rows.length - 1} rules, 由 fetch:baseline 管理)`
-  );
 
   writeSheet(
     path.join(CONFIG_DIR, 'terminology.default.xlsx'),
