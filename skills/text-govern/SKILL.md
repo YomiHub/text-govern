@@ -42,6 +42,8 @@ disable-model-invocation: true
 TG_CMD scan
 ```
 
+支持前端与 Java 后端项目。Java 后端默认扫描 `.java` 运行时字符串/注解/日志/异常/返回文案，以及 `.yml/.yaml/.properties` 配置值；默认不扫描注释/Javadoc。多模块后端可保持 `scan.include: ['**/*']`，或收窄到 `['*/src/main/**']`。
+
 汇报：扫描文件数 / 提取片段数 / 解析失败文件。
 
 ### 步骤 2 — 规则匹配分析
@@ -128,7 +130,7 @@ TG_CMD report
 - `industry` 字段
 - `app.json` 路由、tabBar、`window.navigationBarTitleText`
 - `extracted.json` 中按 `pageHint` 聚合的 TOP 模块和高频文案
-- 接口/路径/字段命名习惯
+- 接口/路径/字段命名习惯；Java 后端项目重点参考 controller/service、注解、日志/异常、邮件/消息模板、配置项等运行时文案上下文
 
 让用户确认画像后再继续。
 

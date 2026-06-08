@@ -36,13 +36,13 @@ npm install -g text-govern@lates
 
 ### 方式三：当前 monorepo 内置源码（本地开发）
 
-本仓库 **`package.json` 根目录未挂载 `npm run text-govern:*` 脚本**时，请直接用 **`node` 指向 CLI 入口**（工作目录始终在**业务项目根**，即微信小程序仓库根）。
+本仓库 **`package.json` 根目录未挂载 `npm run text-govern:*` 脚本**时，请直接用 **`node` 指向 CLI 入口**（工作目录始终在**业务项目根**，可以是前端项目根，也可以是 Java 后端 monorepo 根）。
 
 ```bash
 # 1) 一次性安装 CLI 包依赖（在 text-govern 子目录）
 cd scripts/text-govern && npm install
 
-# 2) 在业务项目根（本 monorepo 一般为仓库根目录，含 app.json 与 scripts/text-govern/）
+# 2) 在业务项目根（含 scripts/text-govern/；Java 多模块项目可直接在 monorepo 根执行）
 node scripts/text-govern/bin/text-govern.js install --editor cursor,claude
 # 预览不写盘：node scripts/text-govern/bin/text-govern.js install --dry-run --editor cursor
 
@@ -131,9 +131,16 @@ module.exports = {
   industry: "医药系统中的代理商专用商贷宝系统",
 
   scan: {
-    include: ["pages/**", "packageA/**", "packageB/**", "packageC/**", "components/**", "app.json"],
-    exclude: ["node_modules/**", "miniprogram_npm/**", ".text-govern/**", "**/*.test.js"],
-    adapters: ["wxml", "js", "json"],
+    // 默认可覆盖前端项目和 Java 多模块后端；只处理 adapters 支持的文件后缀。
+    include: ["**/*"],
+    // Java 后端也可收窄为 ["*/src/main/**"] 或 ["bfcn-core/src/main/**"]。
+    exclude: ["node_modules/**", "miniprogram_npm/**", ".text-govern/**", "target/**", "**/target/**", "build/**", "**/build/**", ".gradle/**", "**/.gradle/**", "**/*.test.js"],
+    adapters: ["wxml", "js", "json", "vue", "jsx", "html", "java", "yaml", "properties"],
+    backend: {
+      includeComments: false,
+      includeLogMessages: true,
+      includeAnnotations: true,
+    },
   },
 
   customRules: { dir: "./text-govern-rules/custom" },
@@ -268,3 +275,6 @@ text-govern scan && text-govern analyze && text-govern report   # 无全局时�
 | `vue`  | `.vue`         | Vue SFC（需 `@vue/compiler-sfc`） |
 | `jsx`  | `.jsx` `.tsx`  | JSX（需 `@babel/parser`，已内置） |
 | `html` | `.html` `.htm` | HTML（需 `parse5`）               |
+| `java` | `.java`        | Java 后端运行时字符串、注解、日志/异常/返回文案 |
+| `yaml` | `.yml` `.yaml` | YAML 配置值（默认跳过注释）       |
+| `properties` | `.properties` | Properties 配置值（默认跳过注释） |

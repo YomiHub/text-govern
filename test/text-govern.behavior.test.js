@@ -634,6 +634,94 @@ function testPackageJsonHasBuildDefaultsScript() {
   );
 }
 
+async function testBackendJavaYamlPropertiesScan() {
+  const cwd = tempProject();
+  const srcDir = path.join(cwd, 'order-service', 'src', 'main');
+  fs.mkdirSync(path.join(srcDir, 'java', 'com', 'example'), { recursive: true });
+  fs.mkdirSync(path.join(srcDir, 'resources'), { recursive: true });
+  fs.mkdirSync(path.join(cwd, 'order-service', 'target'), { recursive: true });
+
+  fs.writeFileSync(
+    path.join(srcDir, 'java', 'com', 'example', 'OrderController.java'),
+    [
+      'package com.example;',
+      '',
+      'import io.swagger.annotations.ApiOperation;',
+      '',
+      'public class OrderController {',
+      '  // 注释里的中文不应默认扫描',
+      '  @ApiOperation("产品列表")',
+      '  public String list() {',
+      '    logger.info("发送邮件");',
+      '    if (true) { throw new RuntimeException("邮件发送失败"); }',
+      '    String content = """',
+      '      不良反应呈报',
+      '      姓名：张三',
+      '      """;',
+      '    return "提交成功";',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(srcDir, 'resources', 'application.yml'),
+    [
+      '# YAML 注释里的中文不应默认扫描',
+      'spring:',
+      '  application:',
+      '    name: 官网服务',
+      'messages:',
+      '  - "提交成功"',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(srcDir, 'resources', 'messages.properties'),
+    [
+      '# properties 注释里的中文不应默认扫描',
+      'message.success=提交成功',
+      'message.failure: 邮件发送失败',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+  fs.writeFileSync(
+    path.join(cwd, 'order-service', 'target', 'Generated.java'),
+    'class Generated { String v = "构建产物不应扫描"; }',
+    'utf8'
+  );
+
+  const { run: scanRun } = require('../lib/commands/scan');
+  const result = await scanRun({ cwd });
+  const fragments = result.fragments;
+  const texts = fragments.map((f) => f.normalized);
+
+  assert.ok(texts.includes('产品列表'), 'Java annotation text should be extracted');
+  assert.ok(texts.includes('发送邮件'), 'Java log text should be extracted');
+  assert.ok(texts.includes('邮件发送失败'), 'Java exception/properties text should be extracted');
+  assert.ok(texts.includes('提交成功'), 'Java return/properties/yaml text should be extracted');
+  assert.ok(texts.some((text) => text.includes('不良反应呈报')), 'Java text block should be extracted');
+  assert.ok(texts.includes('官网服务'), 'YAML scalar value should be extracted');
+  assert.ok(!texts.some((text) => text.includes('注释里的中文')), 'Comments should not be extracted by default');
+  assert.ok(!texts.some((text) => text.includes('构建产物不应扫描')), 'target directory should be excluded');
+
+  const annotation = fragments.find((f) => f.normalized === '产品列表');
+  assert.strictEqual(annotation.kind, 'java-annotation');
+  assert.strictEqual(annotation.context, 'annotation');
+  assert.ok(annotation.container.includes('@ApiOperation'));
+
+  const yamlValue = fragments.find((f) => f.normalized === '官网服务');
+  assert.strictEqual(yamlValue.kind, 'yaml-value');
+  assert.strictEqual(yamlValue.context, 'config');
+
+  const propertiesValue = fragments.find((f) => f.file.endsWith('messages.properties'));
+  assert.strictEqual(propertiesValue.kind, 'properties-value');
+  assert.strictEqual(propertiesValue.context, 'config');
+}
+
 async function run() {
   const tests = [
     testInitCreatesReusableEmptyExcelTemplates,
@@ -665,6 +753,7 @@ async function run() {
     testReportPrefersConfigSystemBackgroundOverAiMeta,
     testReportTruncatesSystemBackgroundTo200Chars,
     testPackageJsonHasBuildDefaultsScript,
+    testBackendJavaYamlPropertiesScan,
   ];
 
   for (const test of tests) {

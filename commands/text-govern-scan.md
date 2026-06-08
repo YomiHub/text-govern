@@ -4,6 +4,8 @@ description: "用 text-govern 扫描项目源码，提取所有中文文案片�
 
 # /text-govern-scan — 静态扫描提取文案
 
+支持前端与 Java 后端项目：微信小程序 / React / Vue / HTML / JS / JSON，以及 Java 后端 `.java`、`.yml/.yaml`、`.properties` 中的运行时文案。后端默认扫描字符串、注解、日志/异常/返回值、配置值；默认不扫描注释/Javadoc。
+
 ## 前置检查：解析 CLI 前缀（TG_CMD）
 
 在**项目根目录**下按顺序尝试，**任一步成功即得到 TG_CMD 并继续，不要中断**；仅当四步均失败时再提示安装。
@@ -20,6 +22,8 @@ description: "用 text-govern 扫描项目源码，提取所有中文文案片�
 ```bash
 TG_CMD scan
 ```
+
+多模块 Java 后端可保持默认 `scan.include: ['**/*']`，由 adapters 和 exclude 自动过滤；如需收窄范围，可在 `text-govern.config.js` 中配置为 `['*/src/main/**']` 或具体模块路径。
 
 ## 完成后汇报
 
