@@ -212,10 +212,10 @@ module.exports = {
   /**
    * 行业/业务类型，支持：
    * - 留空：由 Cursor AI 自行判断
-   * - 任意中文描述：例如 '医药系统中的代理商专用商贷宝系统'
+   * - 任意中文描述：例如 '医院信息系统'
    * 不再使用 medical/finance/ecommerce 等固定枚举。
    */
-  industry: "医药系统中的代理商专用商贷宝系统",
+  industry: "医院信息系统",
 
   scan: {
     include: ["pages/**", "packageA/**", "packageB/**", "packageC/**", "components/**", "app.json"],

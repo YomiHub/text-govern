@@ -128,7 +128,7 @@ text-govern
 // text-govern.config.js（在项目根目录）
 module.exports = {
   // 可留空，让 AI 根据源码判断；也可填任意中文业务描述
-  industry: "医药系统中的代理商专用商贷宝系统",
+  industry: "医院信息系统",
 
   scan: {
     // 默认可覆盖前端项目和 Java 多模块后端；只处理 adapters 支持的文件后缀。
