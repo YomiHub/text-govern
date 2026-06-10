@@ -44,7 +44,7 @@ program
 
 program
   .command('report')
-  .description('合并 rule + ai findings，生成 HTML 整改报告')
+  .description('合并 rule + ai findings，生成 HTML 审计报告')
   .option('--cwd <dir>', '工作目录', process.cwd())
   .option('--config <file>', '配置文件路径')
   .option('--rule-findings <file>', 'findings.rule.json 路径')

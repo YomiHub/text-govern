@@ -1,6 +1,6 @@
 # text-govern
 
-自动化文案治理 CLI + AI Skill。静态扫描源码、规则匹配、AI 语义分析、生成 HTML 整改报告；规则以 Excel 为一等公民，支持通过 `/text-govern-*` slash 命令在 Cursor / Claude Code / Codex 中直接触发。
+自动化文案治理 CLI + AI Skill。静态扫描源码、规则匹配、AI 语义分析、生成 HTML 审计报告；规则以 Excel 为一等公民，支持通过 `/text-govern-*` slash 命令在 Cursor / Claude Code / Codex 中直接触发。
 
 ## 安装
 
@@ -147,9 +147,13 @@ module.exports = {
   builtinRules: { dir: "./text-govern-rules/generated" },
 
   rules: {
-    // 是否启用内置默认词库（config/*.default.xlsx）
-    // 默认 false，只用项目 AI 生成 / 自定义规则
-    includeDefaults: false,
+    // 是否启用内置默认词库（config/*.default.xlsx）及基线合规类目 Prompt 扫描
+    includeDefaults: true,
+    // 是否启用标准产品名 / 宣传语识别（AI 语义阶段）
+    includeStandardWords: true,
+    // 是否启用项目 terminology.xlsx 规则匹配（词义统一类）
+    // 设为 false 时 analyze 跳过项目术语规则，AI 语义分析不受影响
+    includeProjectTerminology: true,
   },
 
   output: { dir: "./.text-govern" },
@@ -239,7 +243,7 @@ Sheet 名：`业务语义`
 | `.text-govern/extracted.json`     | 文案提取结果                             |
 | `.text-govern/findings.rule.json` | 规则匹配结果                             |
 | `.text-govern/findings.ai.json`   | AI 语义分析结果                          |
-| `.text-govern/report/index.html`        | HTML 整改报告（入口为 index.html） |
+| `.text-govern/report/index.html`        | HTML 审计报告（入口为 index.html） |
 
 ## 推荐工作流
 

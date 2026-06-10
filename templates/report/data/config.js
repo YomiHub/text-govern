@@ -1,5 +1,5 @@
 window.__TEXT_GOVERN_REPORT_CONFIG__ = {
-  "title": "整改报告",
+  "title": "审计报告",
   "remark": "由 text-govern 自动生成",
   "meta": {
     "generatedAt": "",

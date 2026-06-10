@@ -1,6 +1,6 @@
 ---
 name: text-govern CLI 开发方案
-overview: 在 `scripts/text-govern/` 下交付一个多端通用的文案治理 CLI + AI Skill：静态扫描提取 → 规则匹配（违禁/术语/语义）→ Cursor/Claude/Codex Skill 编排 AI 做多维度治理 → 输出自包含 HTML 整改报告。规则以 Excel 为一等公民，分内置默认 / AI 生成 / 用户自定义三层；通过 npm 包发布 + text-govern install 安装器铺设 Slash 命令到多家 AI 编辑器。
+overview: 在 `scripts/text-govern/` 下交付一个多端通用的文案治理 CLI + AI Skill：静态扫描提取 → 规则匹配（违禁/术语/语义）→ Cursor/Claude/Codex Skill 编排 AI 做多维度治理 → 输出自包含 HTML 审计报告。规则以 Excel 为一等公民，分内置默认 / AI 生成 / 用户自定义三层；通过 npm 包发布 + text-govern install 安装器铺设 Slash 命令到多家 AI 编辑器。
 isProject: false
 revision: v3 · 三层封装多编辑器发布
 lastUpdated: 2026-05-12

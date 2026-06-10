@@ -1,7 +1,7 @@
 {
   "name": "text-govern",
   "version": "0.2.1",
-  "description": "自动化文案治理 CLI + AI Skill —— 静态扫描 + 规则匹配 + AI 语义分析 + HTML 整改报告，支持 Cursor / Claude Code / Codex",
+  "description": "自动化文案治理 CLI + AI Skill —— 静态扫描 + 规则匹配 + AI 语义分析 + HTML 审计报告，支持 Cursor / Claude Code / Codex",
   "main": "bin/text-govern.js",
   "bin": {
     "text-govern": "bin/text-govern.js"

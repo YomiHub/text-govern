@@ -83,7 +83,7 @@
 
 ### Step 7: 标准术语对比（任务 6 — 仅当 `rules.includeStandardWords = true`）
 
-**前置**：先读取 `text-govern.config.js` 中的 `rules.includeStandardWords`；若为 `false`（默认值），
+**前置**：先读取 `text-govern.config.js` 中的 `rules.includeStandardWords`；若为 `false`，
 直接跳过本 Step，不执行任何匹配。
 
 **数据加载**：

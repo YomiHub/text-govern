@@ -534,13 +534,152 @@ function testBuildStandardRulesGeneratesJson() {
   assert.ok('slogan' in slogans[0], '宣传语对象应包含 slogan 字段');
 }
 
-function testConfigDefaultsIncludeStandardWordsFalse() {
+function testConfigDefaultsIncludeStandardWordsTrue() {
   const { loadConfig } = require('../lib/config');
   const config = loadConfig({ cwd: path.join(__dirname, '..') });
   assert.strictEqual(
     config.rules.includeStandardWords,
-    false,
-    'rules.includeStandardWords 默认应为 false'
+    true,
+    'rules.includeStandardWords 默认应为 true'
+  );
+}
+
+function testConfigDefaultsIncludeDefaultsTrue() {
+  const { loadConfig } = require('../lib/config');
+  const config = loadConfig({ cwd: path.join(__dirname, '..') });
+  assert.strictEqual(
+    config.rules.includeDefaults,
+    true,
+    'rules.includeDefaults 默认应为 true'
+  );
+}
+
+function testConfigDefaultsIncludeProjectTerminologyTrue() {
+  const { loadConfig } = require('../lib/config');
+  const config = loadConfig({ cwd: path.join(__dirname, '..') });
+  assert.strictEqual(
+    config.rules.includeProjectTerminology,
+    true,
+    'rules.includeProjectTerminology 默认应为 true'
+  );
+}
+
+function writeTerminologyXlsx(dir, canonical, aliases) {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      ['标准词', '别名（逗号分隔）', '备注'],
+      [canonical, aliases, '测试规则'],
+    ]),
+    '术语统一'
+  );
+  XLSX.writeFile(wb, path.join(dir, 'terminology.xlsx'));
+}
+
+function writeExtractedJson(cwd, fragments) {
+  const extractedDir = path.join(cwd, '.text-govern');
+  fs.mkdirSync(extractedDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(extractedDir, 'extracted.json'),
+    JSON.stringify({ fragments }),
+    'utf8'
+  );
+}
+
+function patchConfigRules(cwd, rulesPatch) {
+  const configPath = path.join(cwd, 'text-govern.config.js');
+  let configContent = fs.readFileSync(configPath, 'utf8');
+  for (const [key, value] of Object.entries(rulesPatch)) {
+    const existing = new RegExp(`${key}:\\s*(?:true|false)`);
+    if (existing.test(configContent)) {
+      configContent = configContent.replace(existing, `${key}: ${JSON.stringify(value)}`);
+    } else {
+      configContent = configContent.replace(
+        /includeStandardWords: (?:true|false),/,
+        `includeStandardWords: true,\n    ${key}: ${JSON.stringify(value)},`
+      );
+    }
+  }
+  fs.writeFileSync(configPath, configContent);
+  // init → template → loadConfig 会缓存配置；patch 后需按 resolve 路径清除
+  try {
+    delete require.cache[require.resolve(path.resolve(configPath))];
+  } catch (_) {}
+}
+
+async function testAnalyzeSkipsProjectTerminologyWhenDisabled() {
+  const cwd = tempProject();
+  await init({ cwd });
+  const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
+  writeTerminologyXlsx(rulesDir, '专属标准词', '项目别名');
+
+  writeExtractedJson(cwd, [
+    {
+      id: 'frag_001',
+      file: 'pages/test/index.wxml',
+      line: 1,
+      column: 0,
+      raw: '项目别名',
+      normalized: '项目别名',
+      kind: 'wxml-text',
+      pageHint: 'pages/test',
+      surrounding: '',
+    },
+  ]);
+
+  patchConfigRules(cwd, {
+    includeProjectTerminology: false,
+    includeDefaults: false,
+  });
+
+  const { run: analyzeRun } = require('../lib/commands/analyze');
+  const result = await analyzeRun({ cwd });
+
+  const termFindings = result.findings.filter((f) => f.category === '词义统一类');
+  assert.strictEqual(termFindings.length, 0, '关闭项目术语规则时不应产出词义统一类 finding');
+
+  const meta = JSON.parse(
+    fs.readFileSync(path.join(cwd, '.text-govern', 'findings.rule.json'), 'utf8')
+  ).meta;
+  assert.strictEqual(meta.includeProjectTerminology, false);
+  assert.ok(meta.rulesLoaded.projectTerminology >= 1, '应记录项目侧已加载但被跳过的术语条数');
+  assert.strictEqual(meta.rulesLoaded.terminology, 0, '实际参与匹配的术语条数应为 0');
+}
+
+async function testAnalyzeBaselineTerminologyWorksWhenProjectDisabled() {
+  const cwd = tempProject();
+  await init({ cwd });
+  const rulesDir = path.join(cwd, 'text-govern-rules', 'generated');
+  writeTerminologyXlsx(rulesDir, '专属标准词', '项目别名');
+
+  writeExtractedJson(cwd, [
+    {
+      id: 'frag_001',
+      file: 'pages/login/index.wxml',
+      line: 1,
+      column: 0,
+      raw: '请登陆',
+      normalized: '请登陆',
+      kind: 'wxml-text',
+      pageHint: 'pages/login',
+      surrounding: '',
+    },
+  ]);
+
+  patchConfigRules(cwd, {
+    includeProjectTerminology: false,
+    includeDefaults: true,
+  });
+
+  const { run: analyzeRun } = require('../lib/commands/analyze');
+  const result = await analyzeRun({ cwd });
+
+  const termFindings = result.findings.filter((f) => f.category === '词义统一类');
+  assert.ok(termFindings.length >= 1, '内置默认术语规则在关闭项目规则后仍应生效');
+  assert.ok(
+    termFindings.some((f) => f.matched === '登陆'),
+    '应命中内置默认规则中的"登陆"别名'
   );
 }
 
@@ -747,7 +886,11 @@ async function run() {
     testAnalyzeMetaHasNoBaselineFields,
     // New: standard words + config defaults
     testBuildStandardRulesGeneratesJson,
-    testConfigDefaultsIncludeStandardWordsFalse,
+    testConfigDefaultsIncludeStandardWordsTrue,
+    testConfigDefaultsIncludeDefaultsTrue,
+    testConfigDefaultsIncludeProjectTerminologyTrue,
+    testAnalyzeSkipsProjectTerminologyWhenDisabled,
+    testAnalyzeBaselineTerminologyWorksWhenProjectDisabled,
     testConfigDefaultsSystemBackgroundEmpty,
     testReportUsesAiSystemBackgroundWhenConfigEmpty,
     testReportPrefersConfigSystemBackgroundOverAiMeta,

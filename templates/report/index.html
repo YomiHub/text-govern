@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>整改报告</title>
+  <title>审计报告</title>
   <link rel="stylesheet" href="./css/report.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <header class="report-header">
       <div>
         <p class="eyebrow">Text Govern Audit</p>
-        <h1>{{ config.title || '整改报告' }}</h1>
+        <h1>{{ config.title || '审计报告' }}</h1>
         <p class="system-background" v-if="systemBackgroundText">
           {{ systemBackgroundText }}
         </p>
@@ -207,7 +207,7 @@
 
         return {
           config: {
-            title: '整改报告',
+            title: '审计报告',
             meta: {},
             stats: { total: 0, bySeverity: {}, byCategory: {} },
             ...config,

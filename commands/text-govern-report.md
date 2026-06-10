@@ -1,5 +1,5 @@
 ---
-description: "用 text-govern 执行 AI 语义深度分析并生成 HTML 整改报告。当用户说「生成报告」「生成整改报告」「text-govern 报告」「查看文案问题」时使用。"
+description: "用 text-govern 执行 AI 语义深度分析并生成 HTML 审计报告。当用户说「生成报告」「生成审计报告」「text-govern 报告」「查看文案问题」时使用。"
 ---
 
 # /text-govern-report — AI 语义分析 + 生成 HTML 报告

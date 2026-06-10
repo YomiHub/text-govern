@@ -28,8 +28,9 @@ TG_CMD init
 1. 已创建 `text-govern.config.js` — 可以编辑以下关键字段：
    - `industry`：留空让 AI 自动判断，或填写业务描述如"医药代理商 SaaS 系统"
    - `systemBackground`：系统背景资料（建议 200 字以内），展示在报告 header；留空时由 `/text-govern-report` AI 语义阶段自动识别并写入 `findings.ai.json`
-   - `rules.includeDefaults`（默认 `false`）：开启后 `/text-govern-rules` 阶段 AI 会扫代码库命中基线类目（色情/政治/暴恐/广告/涉枪涉爆）的具体词并写入 banned.xlsx，**不加载大词库文件**，识别更智能
-   - `rules.includeStandardWords`（默认 `false`）：开启后 `/text-govern-report` AI 语义阶段会识别标准产品名/宣传语的非标准写法（拼写错误/谐音/篡改），需先在 `scripts/text-govern/config/` 目录下提供 `standard-product.xlsx` 并运行 `npm run build:defaults`
+   - `rules.includeDefaults`（默认 `true`）：开启后 `/text-govern-rules` 阶段 AI 会扫代码库命中基线类目（色情/政治/暴恐/广告/涉枪涉爆）的具体词并写入 banned.xlsx，**不加载大词库文件**，识别更智能；设为 `false` 可跳过
+   - `rules.includeStandardWords`（默认 `true`）：开启后 `/text-govern-report` AI 语义阶段会识别标准产品名/宣传语的非标准写法（拼写错误/谐音/篡改）；需先在 `scripts/text-govern/config/` 目录下提供 `standard-product.xlsx` 并运行 `npm run build:defaults`
+   - `rules.includeProjectTerminology`（默认 `true`）：设为 `false` 时 `analyze` 阶段跳过项目 `terminology.xlsx` 词义统一类检查；不影响内置默认术语、业务语义规则及 AI 语义分析
 2. 已创建 `text-govern-rules/custom/` — 存放业务/合规人工维护的规则（最高优先级）
 3. 已创建 `text-govern-rules/generated/` — 存放 AI 生成的规则
 4. 下一步：使用 `/text-govern-rules` 让 AI 按 6 维度生成规则库

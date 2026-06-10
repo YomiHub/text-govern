@@ -32,10 +32,10 @@ description: "完整执行 skills/text-govern/SKILL.md「Init 场景」全文（
 
 读取项目根 `text-govern.config.js` 中的以下字段，并将对应的 prompt 段落纳入规则生成上下文：
 
-- **`rules.includeDefaults`**（默认 `false`）：
+- **`rules.includeDefaults`**（默认 `true`）：
   - 若为 `true`：在生成 `banned.xlsx` 时，依照 `skills/prompts/generate-rules.md`「内置基线类目限定范围」章节，扫代码库命中项，将确有证据的词写入 banned.xlsx 对应基线分类（色情违规/政治敏感/暴恐违禁/涉枪涉爆/广告违规）。
   - 若为 `false`：完全跳过基线类目，项目 banned.xlsx 只含行业/业务/品牌专有合规词。
-- **`rules.includeStandardWords`**（默认 `false`）：
+- **`rules.includeStandardWords`**（默认 `true`）：
   - 该开关影响的是 `/text-govern-report` AI 语义阶段（`analyze-semantics.md` 任务 6），此处无需额外操作；仅在汇报时提示用户如需启用标准产品名/宣传语识别请开启此开关。
 
 ## 执行
