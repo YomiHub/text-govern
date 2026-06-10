@@ -151,6 +151,10 @@ module.exports = {
     includeDefaults: true,
     // 是否启用标准产品名 / 宣传语识别（AI 语义阶段）
     includeStandardWords: true,
+    // 项目规则生成严格等级，范围 1-10，默认 5；越大覆盖越细
+    // 主要控制 terminology/semantic 与低风险 UX/品牌建议数量
+    // 严重违禁、高风险、基线合规命中不受影响
+    auditStrictness: 5,
     // 是否启用项目 terminology.xlsx 规则匹配（词义统一类）
     // 设为 false 时 analyze 跳过项目术语规则，AI 语义分析不受影响
     includeProjectTerminology: true,

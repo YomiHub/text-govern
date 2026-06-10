@@ -37,6 +37,12 @@ description: "完整执行 skills/text-govern/SKILL.md「Init 场景」全文（
   - 若为 `false`：完全跳过基线类目，项目 banned.xlsx 只含行业/业务/品牌专有合规词。
 - **`rules.includeStandardWords`**（默认 `true`）：
   - 该开关影响的是 `/text-govern-report` AI 语义阶段（`analyze-semantics.md` 任务 6），此处无需额外操作；仅在汇报时提示用户如需启用标准产品名/宣传语识别请开启此开关。
+- **`rules.auditStrictness`**（默认 `5`，范围 `1-10`）：
+  - 控制本次项目规则生成的筛选门槛和低风险规则数量，越大覆盖越细。
+  - `1-3`：只生成确定性高、业务影响明显的项目规则，显著收紧 terminology/semantic 与推荐修改类条目。
+  - `4-6`：平衡模式，只生成有明确证据或明显业务歧义的统一项。
+  - `7-10`：全面治理，允许更多术语、语义、体验类建议，但仍必须有源码证据。
+  - 严重违禁、高风险、基线合规命中不受该等级压制。
 
 ## 执行
 
@@ -63,3 +69,4 @@ description: "完整执行 skills/text-govern/SKILL.md「Init 场景」全文（
 - 使用英文风险等级（critical/high/medium/low）或英文分类
 - 凭空生成与本项目源码无关的规则
 - **基线类目规则处理**：当 `rules.includeDefaults = false` 时，**禁止**在 banned.xlsx 中生成色情/政治/暴恐/涉枪涉爆/广告违规等基线类目词条；当 `rules.includeDefaults = true` 时，按「前置检查 4」和 `generate-rules.md`「内置基线类目限定范围」章节执行——**只输出有代码库证据的命中词，绝不照抄词库文件，绝不堆砌通用词**
+- **低风险规则截断**：按 `rules.auditStrictness` 执行 `generate-rules.md` 的数量上限；被截断的词义统一、业务语义、推荐修改类条目只写入 README 的未输出原因，不进入 Excel。

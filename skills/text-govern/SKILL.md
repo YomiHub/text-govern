@@ -121,6 +121,7 @@ TG_CMD report
    - `industry`：留空则从源码/路由自行判断；非空则作为业务上下文
    - `rules.includeDefaults`：若为 `true`，在步骤 C 生成 banned.xlsx 时需按 `skills/prompts/generate-rules.md`「内置基线类目限定范围」章节，扫代码库命中基线类目词并写入；若为 `false` 则跳过基线类目
    - `rules.includeStandardWords`：若为 `true`，在步骤 5（AI 语义分析）中执行任务 6；此处无需操作，仅记录供后续使用
+   - `rules.auditStrictness`：1-10，默认 5；控制项目规则生成的筛选门槛和低风险规则数量，越大覆盖越细。严重违禁、高风险、基线合规命中不受该等级压制
 3. 确保 `.text-govern/extracted.json` 存在；不存在则先 `TG_CMD scan`
 
 ### 步骤 B · 业务画像（必须先做，再写规则）
@@ -182,3 +183,5 @@ TG_CMD analyze
 - `findings.ai.json` 只写入确认有问题的条目
 - 不要凭空生成通用规则；规则必须来自用户 Excel、AI 结合源码生成的 Excel、或用户明确启用的默认规则
 - 不要在日常扫描中修改规则文件；只有用户要求初始化/更新规则库时，才写 `text-govern-rules/generated/`
+- `rules.includeStandardWords` 只控制 AI 语义阶段的标准产品名/宣传语识别，不参与 `analyze` 规则匹配，也不影响项目规则生成
+- 生成项目规则时必须遵守 `rules.auditStrictness`：`1-3` 只保留确定性高、业务影响明显的统一项；`4-6` 平衡生成；`7-10` 可更全面，但仍必须有源码证据。被截断的低优先级项只写入 README 的未输出原因，不进入 Excel
