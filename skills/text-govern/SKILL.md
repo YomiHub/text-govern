@@ -121,7 +121,7 @@ TG_CMD report
    - `industry`：留空则从源码/路由自行判断；非空则作为业务上下文
    - `rules.includeDefaults`：若为 `true`，在步骤 C 生成 banned.xlsx 时需按 `skills/prompts/generate-rules.md`「内置基线类目限定范围」章节，扫代码库命中基线类目词并写入；若为 `false` 则跳过基线类目
    - `rules.includeStandardWords`：若为 `true`，在步骤 5（AI 语义分析）中执行任务 6；此处无需操作，仅记录供后续使用
-   - `rules.auditStrictness`：1-10，默认 5；控制项目规则生成的筛选门槛和低风险规则数量，越大覆盖越细。严重违禁、高风险、基线合规命中不受该等级压制
+   - `rules.auditStrictness`：1-10，默认 2；控制项目规则生成的筛选门槛和低风险规则数量，越大覆盖越细。严重违禁、高风险、基线合规命中不受该等级压制
 3. 确保 `.text-govern/extracted.json` 存在；不存在则先 `TG_CMD scan`
 
 ### 步骤 B · 业务画像（必须先做，再写规则）

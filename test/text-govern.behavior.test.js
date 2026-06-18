@@ -31,7 +31,8 @@ async function testInitCreatesReusableEmptyExcelTemplates() {
   assert.match(config, /industry:\s*''/, 'init config should allow empty industry for AI inference');
   assert.match(config, /systemBackground:\s*''/, 'init config should include empty systemBackground field');
   assert.match(config, /includeStandardWords:\s*true/, 'init config should keep includeStandardWords enabled by default');
-  assert.match(config, /auditStrictness:\s*5/, 'init config should include balanced auditStrictness default');
+  assert.match(config, /includeDefaults:\s*false/, 'init config should disable baseline defaults by default');
+  assert.match(config, /auditStrictness:\s*2/, 'init config should include balanced auditStrictness default');
 
   const customDir = path.join(cwd, 'text-govern-rules', 'custom');
   for (const file of ['banned.xlsx', 'terminology.xlsx', 'semantic.xlsx']) {
@@ -546,13 +547,13 @@ function testConfigDefaultsIncludeStandardWordsTrue() {
   );
 }
 
-function testConfigDefaultsIncludeDefaultsTrue() {
+function testConfigDefaultsIncludeDefaultsFalse() {
   const { loadConfig } = require('../lib/config');
   const config = loadConfig({ cwd: path.join(__dirname, '..') });
   assert.strictEqual(
     config.rules.includeDefaults,
-    true,
-    'rules.includeDefaults 默认应为 true'
+    false,
+    'rules.includeDefaults 默认应为 false'
   );
 }
 
@@ -566,10 +567,10 @@ function testConfigDefaultsIncludeProjectTerminologyTrue() {
   );
 }
 
-function testConfigDefaultsAuditStrictnessFive() {
+function testConfigDefaultsAuditStrictnessTwo() {
   const { loadConfig } = require('../lib/config');
   const config = loadConfig({ cwd: path.join(__dirname, '..') });
-  assert.strictEqual(config.rules.auditStrictness, 5, 'rules.auditStrictness 默认应为 5');
+  assert.strictEqual(config.rules.auditStrictness, 2, 'rules.auditStrictness 默认应为 2');
 }
 
 function testConfigNormalizesAuditStrictness() {
@@ -580,7 +581,8 @@ function testConfigNormalizesAuditStrictness() {
     [0, 1],
     [11, 10],
     ['8', 8],
-    ['bad', 5],
+    ['bad', 2],
+    ['', 2],
   ];
 
   for (const [input, expected] of cases) {
@@ -927,9 +929,9 @@ async function run() {
     // New: standard words + config defaults
     testBuildStandardRulesGeneratesJson,
     testConfigDefaultsIncludeStandardWordsTrue,
-    testConfigDefaultsIncludeDefaultsTrue,
+    testConfigDefaultsIncludeDefaultsFalse,
     testConfigDefaultsIncludeProjectTerminologyTrue,
-    testConfigDefaultsAuditStrictnessFive,
+    testConfigDefaultsAuditStrictnessTwo,
     testConfigNormalizesAuditStrictness,
     testAnalyzeSkipsProjectTerminologyWhenDisabled,
     testAnalyzeBaselineTerminologyWorksWhenProjectDisabled,
